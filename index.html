@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome Page</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="#introduction" class="active">Introduction</a></li>
+                <li><a href="#projects">Projects</a></li>
+                <li><a href="#resume">Resume</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section id="introduction" class="full-height">
+            <h1>Welcome to our webpage!</h1>
+            <p>We're excited to have you here! Our webpage is designed to be a friendly and welcoming space for everyone.</p>
+        </section>
+        <section id="projects" class="full-height">
+            <h1>Our Projects</h1>
+            <div class="carousel">
+                <button class="carousel-button left" aria-label="Previous slide">
+                    <svg width="24" height="24" viewBox="0 0 24 24">
+                        <path d="M16.67 0l-2.83 2.83-1.42 1.42L12 3.54 7.58 7.96l-1.42-1.42L12 16.67 19.42 10.25z" />
+                    </svg>
+                </button>
+                <button class="carousel-button right" aria-label="Next slide">
+                    <svg width="24" height="24" viewBox="0 0 24 24">
+                        <path d="M7.33 0l-2.83 2.83 1.42 1.42L12 3.54 16.42 7.96l1.42-1.42L12 16.67 4.58 10.25z" />
+                    </svg>
+                </button>
+                <div class="carousel-inner">
+                    <div class="carousel-slide active">
+                        <img src="project1.jpg" alt="Project 1 Image">
+                        <h2>Project 1</h2>
+                        <p>This is a description of Project 1. You can add more details and images here.</p>
+                    </div>
+                    <div class="carousel-slide">
+                        <img src="project2.jpg" alt="Project 2 Image">
+                        <h2>Project 2</h2>
+                        <p>This is a description of Project 2. You can add more details and images here.</p>
+                    </div>
+                    <!-- Add more carousel slides here -->
+                </div>
+            </div>
+        </section>
+        <section id="resume" class="full-height">
+            <h1>Our Resume</h1>
+            <embed src="resume.pdf" type="application/pdf" width="100%" height="100%">
+        </section>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>
