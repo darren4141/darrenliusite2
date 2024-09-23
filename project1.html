@@ -36,6 +36,12 @@
             text-align: center;
             padding: 20px;
         }
+        .vision-image {
+            width: 300px; /* or any other value you prefer */
+            height: auto; /* to maintain the aspect ratio */
+            margin: 10px; /* add some margin around the image */
+            display: inline-block; /* make them display side by side */
+        }
     </style>
 </head>
 <body>
@@ -43,8 +49,21 @@
         <a href="index.html" class="close-button">&times;</a>
         <!-- <img src="project1cover.png" alt="Project 1" class="project-image"> -->
         <div class="project-text">
-            <h1>Project 1</h1>
-            <p>This is a brief description of Project 1. You can add more text here.</p>
+            <h1>First Robotics Competition 2024</h1>
+            <p>The 2024 FRC game involved scoring rings into different-sized goals. As the team's lead programmer, I managed a team of 6 to ensure all subsystems were complete.
+            </p>
+            <img src="project1/altcover.png">
+            <h2>Vision Processing:</h2>
+            <p>Our robot’s front facing camera was connected to a Raspberry Pi running a vision model called PhotonVision, which could return angles describing the robot’s orientation from certain targets. Using these angles, we developed a formula that could describe the robot’s distance from these targets. This value automatically adjusted the arm’s angle based on a function derived from test data to score game pieces from any distance.</p>
+            <img src="project1/vision.jpg" alt="Vision Processing" class="vision-image", width="50%">
+            <img src="project1/trianglediagram.png" alt="Triangle Diagram" class="vision-image">
+            <h2>Code Structure:</h2>
+            <img src="project1/flowchart.png" alt="Flowchart", width="100%">
+            <h2>Wiring Diagram:</h2>
+            <img src="project1/wiringdiagram.png" alt="Wiring Diagram", width="100%">
+            <h2>Simulation, Odometry, Data Tables</h2>
+            <img src="project1/simulation.png" alt="simulation", width="100%">
+
         </div>
     </div>
 </body>
