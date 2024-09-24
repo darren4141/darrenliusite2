@@ -10,11 +10,15 @@
             font-family: Arial, sans-serif;
             margin: 20px;
         }
+        .title{
+            text-align: center;
+        }
         .project {
             display: inline-block;
+            align-items: center;
             margin: 10px;
-            width: 40vw;
-            height: 60vh;
+            width: 45vw;
+            height: 70vh;
             border: 1px solid #ddd;
             border-radius: 10px;
             overflow: hidden;
@@ -30,6 +34,7 @@
         }
         .project .description {
             position: absolute; /* Make the description absolute within the project box */
+            text-align: center;
             top: 100%; /* Start the description at the bottom of the project box */
             left: 0;
             width: 100%;
@@ -47,7 +52,7 @@
     </style>
 </head>
 <body>
-    <h1>Darren Liu: Selected Projects</h1>
+    <h1 class="title">Darren Liu: Selected Projects</h1>
     <div class="projects">
         <!-- Project 1 -->
         <a href="project1.html" class="project">
@@ -69,7 +74,7 @@
         <a href="project3.html" class="project">
             <img src="project3/cover.jpg" alt="Project 3", width="50%">
             <div class="description">
-                <h2>Differential Swerve Drive Module</h2>
+                <h2>First Robotics Competition 2023</h2>
                 <p>Prototype of a wheel module that can spin in two degrees of freedom</p>
             </div>
         </a>
