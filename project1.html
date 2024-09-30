@@ -13,9 +13,16 @@
         <!-- <img src="project1cover.png" alt="Project 1" class="project-image"> -->
         <div class="project-text">
             <h1>First Robotics Competition 2024</h1>
-            <p>The 2024 FRC game involved scoring rings into different-sized goals. As the team's lead programmer, I managed a team of 6 to ensure all subsystems were complete.
+            <p style="display: inline-block">The 2024 FRC game involved</p>
+            <a href="https://www.youtube.com/watch?v=9keeDyFxzY4" style="display: inline-block">scoring rings into different-sized goals.</a>
+            <!-- <p href="https://www.youtube.com/watch?v=9keeDyFxzY4">scoring rings into different-sized goals.</p> -->
+            <p style="display: inline-block"> As the team's lead programmer, I managed a team of 6 to ensure all subsystems were complete.
             </p>
             <img src="project1/altcover.png">
+            <h2>Code Structure:</h2>
+            <p style="display: inline-block">The robot ran on a command/subsystem based routine.</p>
+            <a style="display: inline-block" href="https://github.com/FRC7902/Crescendo2024v2">See the code!</a>
+            <img src="project1/flowchart.png" alt="Flowchart", width="100%">
             <h2>Vision Processing:</h2>
             <p>Our robot’s front facing camera was connected to a Raspberry Pi running a vision model called PhotonVision, which could return angles describing the robot’s orientation from certain targets. Using these angles, I developed a formula that triangulated the robot’s distance from these targets.</p>
             <img src="project1/vision.jpg" alt="Vision Processing" class="vision-image", width="50%">
@@ -23,8 +30,6 @@
             <h2>Auto Aiming:</h2>
             <p>The distance value found from vision processing was used to automatically adjust the arm’s angle based on a function derived from test data to score game pieces from any distance.</p>
             <img src="project1/graph.png" alt="graph" width="100%">
-            <h2>Code Structure:</h2>
-            <img src="project1/flowchart.png" alt="Flowchart", width="100%">
             <h2>Wiring Diagram:</h2>
             <img src="project1/wiringdiagram.png" alt="Wiring Diagram", width="100%">
             <h2>Simulation, Odometry, Data Tables</h2>
