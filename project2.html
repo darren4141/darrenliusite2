@@ -13,7 +13,21 @@
         <!-- <img src="project1cover.png" alt="Project 1" class="project-image"> -->
         <div class="project-text">
             <h1>Differential Swerve Drive Module</h1>
+            <img src="project2/module.png" width="100%">
 
+            <h2>How it works:</h2>
+
+            <img src="https://www.chiefdelphi.com/uploads/default/original/3X/0/7/07f31e8adc26e0034801757fb726223bc6bcf42a.gif" width="100%">
+            <img src="project2/encoderphase.jpg" width="100%">
+
+            <h2>The code:</h2>
+            <p>This project had two main aspects, the low level code for the motor controllers, and the high level code to control the module as a whole</p>
+
+            <h2>Low level code:</h2>
+            <p>The motors used are N20 DC motors with encoders. The two motors are controlled with an L293D chip that allows for a range of inputs that will vary the voltage. Because of the need for precise control of the motor speed, we need encoders on the motor to monitor the number of revolutions and adjust the speed accordingly.</p>
+            <img src="project2/pidflowchart.png" width="100%">
+            <p>The speed is controlled with a PID feedback loop, which works by finding the error term (the distance away from the setpoint) as a function of time, the derivative of the error term, and the integral of the error term. In this case our setpoint would be a certain RPM:</p>
+            <img src="project2/pidimplementationflowchart.png" width="100%">
         </div>
     </div>
 </body>
