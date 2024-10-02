@@ -32,9 +32,3 @@
             text-align: center;
             padding: 20px;
         }
-        .vision-image {
-            width: 300px; /* or any other value you prefer */
-            height: auto; /* to maintain the aspect ratio */
-            margin: 10px; /* add some margin around the image */
-            display: inline-block; /* make them display side by side */
-        }

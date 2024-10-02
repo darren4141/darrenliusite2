@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project 1</title>
+    <style>
+        .vision-image {
+            display: inline-block; /* make them display side by side */
+        }
+    </style>
     <link rel="stylesheet" href="projectstylesheet.css">
 
 </head>
@@ -13,22 +18,29 @@
         <!-- <img src="project1cover.png" alt="Project 1" class="project-image"> -->
         <div class="project-text">
             <h1>First Robotics Competition 2024</h1>
-            <p style="display: inline-block">The 2024 FRC game involved</p>
-            <a href="https://www.youtube.com/watch?v=9keeDyFxzY4" style="display: inline-block">scoring rings into different-sized goals.</a>
+            <p style="display: inline">The 2024 FRC game involved</p>
+            <a href="https://www.youtube.com/watch?v=9keeDyFxzY4" style="display: inline">scoring rings into different-sized goals.</a>
             <!-- <p href="https://www.youtube.com/watch?v=9keeDyFxzY4">scoring rings into different-sized goals.</p> -->
-            <p style="display: inline-block"> As the team's lead programmer, I managed a team of 6 to ensure all subsystems were complete.
+            <p style="display: inline"> As the team's lead programmer, I managed a team of 6 to ensure all subsystems were complete.
             </p>
-            <img src="project1/altcover.png">
-            <h2>Autonomous Routine:</h2>
-            <img src="project1/3noteauto.gif" alt="">
+            <br>
+            <img src="project1/altcover.png" width="75%">
             <h2>Code Structure:</h2>
             <p style="display: inline-block">The robot ran on a command/subsystem based routine.</p>
             <a style="display: inline-block" href="https://github.com/FRC7902/Crescendo2024v2">See the code!</a>
             <img src="project1/flowchart.png" alt="Flowchart", width="100%">
+            <h2>Autonomous Routine:</h2>
+            <p>The first 15 seconds of the match, the robot is completely autonomous, meaning it runs a pre-programmed routine. These routines are complex combinations of many simple commands such as turning a certain angle, lifting the arm to a certain position, or spinning the shooter to a certain speed. These base commands are combined sequentially or in parallel to create more complex, useful commands. This is a routine I wrote that scores 3 game pieces.</p>
+            <img src="project1/3noteauto.gif" display="inline-block" width="59%">
+            <img src="project1/autocode.png" display="inline-block" width="40%">
+            <p>All of the commands are custom classes, meaning this robot project had over 65 commands. Here's the command that drives backwards until it detects a piece, and then drives forward the same amount:</p>
+            <img src="project1/commandcode.png" width="100%">
             <h2>Vision Processing:</h2>
             <p>Our robot’s front facing camera was connected to a Raspberry Pi running a vision model called PhotonVision, which could return angles describing the robot’s orientation from certain targets. Using these angles, I developed a formula that triangulated the robot’s distance from these targets.</p>
-            <img src="project1/vision.jpg" alt="Vision Processing" class="vision-image", width="50%">
-            <img src="project1/trianglediagram.png" alt="Triangle Diagram" class="vision-image">
+            <img src="project1/vision.jpg" alt="Vision Processing" class="vision-image" width="30%">
+            <img src="project1/trianglediagram.png" alt="Triangle Diagram" class="vision-image" width="30%">
+            <!-- <img src="project1/trianglediagram3d.png" class="vision-image"> -->
+            <img src="project1/3d2.png" class="vision-image" width="30%">
             <h2>Auto Aiming:</h2>
             <p>The distance value found from vision processing was used to automatically adjust the arm’s angle based on a function derived from test data to score game pieces from any distance.</p>
             <img src="project1/graph.png" alt="graph" width="100%">
