@@ -12,16 +12,35 @@
         .title{
             text-align: center;
         }
+
+        .projects {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center; /* Center the divs horizontally */
+        gap: 20px; /* Space between project divs */
+        }
+
+        /* Project div styles */
         .project {
-            display: inline-block;
-            align-items: center;
-            margin: 10px;
-            width: 45vw;
-            height: 70vh;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative; /* Add relative positioning to the project box */
+        flex: 1 1 calc(45vw - 20px); /* Two columns, using viewport width and subtracting the gap */
+        height: 70vh;
+        margin: 10px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: lightgray;
+        }
+
+        @media (max-width: 600px) {
+        .project {
+            flex: 1 1 100%; 
+            max-width: 100%;
+        }
+
         }
         .project:hover {
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
