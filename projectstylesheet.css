@@ -1,8 +1,9 @@
         /* Add some basic styling to make it look decent */
-        @import url('https://fonts.googleapis.com/css2?family=Slabo+27px&display=swap');
         
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Raleway:ital,wght@0,100..900;1,100..900&family=Slabo+27px&display=swap');
+                
         body {
-            font-family: "Slabo 27px", serif;
+            font-family: "Raleway", sans-serif;
             font-weight: 400;
             font-style: normal;            
             margin: 20px;

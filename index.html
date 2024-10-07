@@ -5,41 +5,44 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Slabo+27px&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Raleway:ital,wght@0,100..900;1,100..900&family=Slabo+27px&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Darren Liu Selected Projects</title>
     <style>
         body {
-            font-family: "Slabo 27px", serif;
+            font-family: "Raleway", sans-serif;
+            font-optical-sizing: auto;
             font-weight: 400;
             font-style: normal;
             margin: 20px;
         }
         .title{
             text-align: center;
+            width: 75%;
+            margin: 10px auto;
         }
 
         .projects {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center; /* Center the divs horizontally */
-        gap: 20px; /* Space between project divs */
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center; /* Center the divs horizontally */
+            gap: 20px; /* Space between project divs */
         }
 
         /* Project div styles */
-        .project {
-        flex: 1 1 calc(45vw - 20px); /* Two columns, using viewport width and subtracting the gap */
-        height: 70vh;
-        margin: 10px;
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        overflow: hidden;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: lightgray;
-        }
+        /* .project {
+            flex: 1 1 calc(45vw - 20px);
+            height: 70vh;
+            margin: 10px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: lightgray;
+        } */
 
         @media (max-width: 600px) {
         .project {
@@ -51,78 +54,159 @@
         .project:hover {
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
         }
-        .project img {
+        /* .project img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-        }
+        } */
         .project .description {
-            position: absolute; /* Make the description absolute within the project box */
-            text-align: center;
-            top: 100%; /* Start the description at the bottom of the project box */
+            position: absolute;
+            top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
             color: #fff;
-            padding: 10px;
-            display: none;
-            transition: top 0.5s; /* Add a transition to the top property */
-        }
-        .project .description p{
-            box-sizing: border-box;
-            padding: 40px;
+            display: flex;
+            flex-direction: column; /* Stack elements vertically */
+            justify-content: center; /* Center everything vertically */
+            align-items: center; /* Center everything horizontally */
             text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s;
         }
+
+        .project .description h2 {
+            margin-bottom: 10px; /* Add space below the heading */
+        }
+
+        .project .description p {
+            margin-bottom: 10px; /* Add space below the paragraph */
+        }
+
+        .project .description hr {
+            width: 50%; /* Line width */
+            border: 1px solid #fff; /* Line color */
+            margin-bottom: 10px; /* Space below the line */
+        }
+
+        .project .description .learn-more {
+            font-size: 16px;
+            color: #fff;
+            opacity: 0.8; /* Slightly transparent text */
+        }
+
+
         .project:hover .description {
-            display: block;
+            opacity: 1;
             top: 0; /* Slide the description up to the top of the project box */
+        }
+        .project {
+            /* flex: 1 1 calc(45vw - 20px); Keep the same size for the project div */
+            height: 100%; /*Fix the height of the project container*/
+            width: 100%;
+            /* margin: 10px; */
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: lightgray;
+        }
+
+        .project img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Ensures the image covers the entire area without stretching */
+        }
+
+        .project-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1 1 calc(45vw - 20px); /*Keep the same size for the project div*/
+            height: 90vh; /*Fix the height of the project container*/
+            margin: 0px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .project-wrapper h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 30px;
+            color: #333;
+            font-style: normal;
         }
     </style>
 </head>
 <body>
     <h1 class="title">Darren Liu - Selected Projects</h1>
-    <!-- <h2 class="title">Hi, I'm Darren and these are some of my projects:</h2> -->
-    <div class="projects">
-        <!-- Project 1 -->
-        <a href="project1.html" class="project">
-            <img src="project1/cover.png" alt="Project 1">
-            <div class="description">
-                <h2>First Robotics Competition 2024</h2>
-                <p>Robot made for the FRC 2024 game</p>
+    <p class="title" margin: 50px>Hi, I'm Darren! I'm an undergraduate electrical engineering student. I'm interested in hardware, firmware, and embedded systems development. Check out some of my past projects below:</p>
+        <div class="projects">
+            <!-- Project 1 -->
+            <div class="project-wrapper">
+                <h3>First Robotics Competition 2024</h3>
+                <a href="project1.html" class="project">
+                    <img src="project1/cover.png" alt="Project 1">
+                    <div class="description">
+                        <h2>First Robotics Competition 2024</h2>
+                        <p>Robot made for the FRC 2024 game</p>
+                        <hr>
+                        <span class="learn-more">Click to learn more</span>
+                    </div>
+                </a>
             </div>
-        </a>
-        <!-- Project 2 -->
-        <a href="project2.html" class="project">
-            <img src="project2/module-removebg-preview.png" alt="Project 2", width="50%">
-            <div class="description">
-                <h2>Differential Swerve Drive Module</h2>
-                <p>Prototype of a wheel module that can spin in two degrees of freedom</p>
+        
+            <!-- Project 2 -->
+            <div class="project-wrapper">
+                <h3>Differential Swerve Drive Module</h3>
+                <a href="project2.html" class="project">
+                    <img src="project2/module-removebg-preview.png" alt="Project 2" width="50%">
+                    <div class="description">
+                        <h2>Differential Swerve Drive Module</h2>
+                        <p>Prototype of a wheel module that can spin in two degrees of freedom</p>
+                        <hr>
+                        <span class="learn-more">Click to learn more</span>
+                    </div>
+                </a>
             </div>
-        </a>
-        <a href="project3.html" class="project">
-            <img src="project3/IMG_2233-removebg-preview.png" alt="Project 3", width="50%">
-            <div class="description">
-                <h2>First Robotics Competition 2023</h2>
-                <p>Robot made for the FRC 2023 game</p>
+        
+            <!-- Project 3 -->
+            <div class="project-wrapper">
+                <h3>First Robotics Competition 2023</h3>
+                <a href="project3.html" class="project">
+                    <img src="project3/IMG_2233-removebg-preview.png" alt="Project 3" width="50%">
+                    <div class="description">
+                        <h2>First Robotics Competition 2023</h2>
+                        <p>Robot made for the FRC 2023 game</p>
+                        <hr>
+                        <span class="learn-more">Click to learn more</span>
+                    </div>
+                </a>
             </div>
-        </a>
-
-        <a href="project4.html" class="project">
-            <img src="project4/cover.jpg" alt="Project 4", width="50%">
-            <div class="description">
-                <h2>Smart Trash Bin</h2>
-                <p>Trash bin that uses OpenCV and sensors to track waste thrown into bins to automatically sort them to the correct one</p>
+        
+            <!-- Project 4 -->
+            <div class="project-wrapper">
+                <h3>Smart Trash Bin</h3>
+                <a href="project4.html" class="project">
+                    <img src="project4/cover.png" alt="Project 4" width="50%">
+                    <div class="description">
+                        <h2>Smart Trash Bin</h2>
+                        <p>Trash bin that uses OpenCV and sensors to track waste thrown into bins to automatically sort them to the correct one</p>
+                        <hr>
+                        <span class="learn-more">Click to learn more</span>
+                    </div>
+                </a>
             </div>
-        </a>
-
-        <!-- <a href="project5.html" class="project">
-            <img src="project5/cover.jpg" alt="Project 5", width="50%">
-            <div class="description">
-                <h2>Smart Plant Pot</h2>
-                <p>Prototype of a wheel module that can spin in two degrees of freedom</p>
-            </div>
-        </a> -->
-    </div>
+        </div>
+        
+    
 </body>
 </html>
