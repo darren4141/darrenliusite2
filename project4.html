@@ -19,7 +19,17 @@
             <p>This was a multi-faceted project that involved hardware running on an ESP32 microcontroller, a phone camera running openCV and communicating with the hardware through serial, and a flask server displaying a database of user scores. Combining all of these aspects was arguably the most challenging part of this project.</p>
             <img src="project4/flowchart.png" width="100%">
             <h2>Sensors:</h2>
-            <p>For this project, we only needed two motion sensors but only had access to one. To solve this, I coded an ultrasonic sensor to act as a boolean motion sensor</p>
+            <p>For this project, we only needed two motion sensors but only had access to one. To solve this, I coded an ultrasonic sensor to act as a boolean motion sensor that would return true when nothing was in front of it and false when it detected an object</p>
+            <p>To do this:</p>
+            <ol>
+                <li>Read a value, convert it from signaltime to distance</li>
+                <li>Take the average of the past 50 readings to get the "default value"</li>
+                <li>Wait for a reading that deviates from the average</li>
+                <ul>
+                    <li>Start a timeout, if the reading has deviated from the average for more than 10 clock cycles, return false</li>
+                    <li>This is done to filter out noise</li>
+                </ul>
+            </ol>
             <img src="project4/ultrasonic.png" width="100%">
             <img src="project4/ultrasonicflowchart.png" width="100%">
         </div>

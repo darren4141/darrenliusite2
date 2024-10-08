@@ -21,7 +21,14 @@
             <h2>Arm Extension</h2>
             <img src="project3/extension.png" width="80%">
             <h2>Arm control method:</h2>
-            <p>The arm was controlled with a combined feedforward/feedback control method. The feedback loop was a PID loop and used the position, integral, and derivative of the error term to get the arm to a desired setpoint determined by user input. The feedforward loop accounted for the affects of gravity on the arm. The feedforward voltage scaled with cosine of the angle of the arm and accounted for the percentage extension of the arm since it would change the centre of mass</p>
+            <p>Our main objective with the arm was to allow precise control such that the operator could press one of four buttons and raise the arm to one of four setpoints</p>
+            <p>Such a system would have to account for properties such as gravity, inertia of the system, internal friction, and centre of mass. To achieve this, the arm was controlled with a combined feedforward/feedback control loop</p>
+            <ul>
+                <li>To counteract gravity and internal friction, we found v, a minimum voltage to keep the arm horizontally raised. This meant that a base voltage vcos&theta; was applied at all times</li>
+                <li>To account for the changing centre of mass due to the arm extending in and out, we found this minimum voltage value at the minimum and maximum extension and scaled this value linearly based on the extension percentage read</li>
+                <li>The feedback loop was a PID loop and used the position, integral, and derivative of the error term to get the arm to a desired setpoint</li>
+            </ul>
+            <h2>Arm control method logic diagram:</h2>
             <img src="project3/armPIDflowchart.png" width="80%">
             <h2>Wiring diagram:</h2>
             <p>The grey "RoboRio" acted as the main processor for the robot where the CAN bus (green & yellow) started and terminated. All components were powered through the PDP (red & black). The radio was used to connect to the laptop & controllers.</p>

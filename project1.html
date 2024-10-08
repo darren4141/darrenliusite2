@@ -33,10 +33,12 @@
             <p>The first 15 seconds of the match, the robot is completely autonomous, meaning it runs a pre-programmed routine. These routines are complex combinations of many simple commands such as turning a certain angle, lifting the arm to a certain position, or spinning the shooter to a certain speed. These base commands are combined sequentially or in parallel to create more complex, useful commands. This is a routine I wrote that scores 3 game pieces.</p>
             <img src="project1/3noteauto.gif" display="inline-block" width="59%">
             <img src="project1/autocode.png" display="inline-block" width="40%">
-            <p>All of the commands are custom classes, meaning this robot project had over 65 commands. Here's the command that drives backwards until it detects a piece, and then drives forward the same amount:</p>
+            <p>All of the commands are custom classes, meaning this robot project had over 65 commands. Here's the specific command that drives backwards until it detects a piece, and then drives forward the same amount:</p>
             <img src="project1/commandcode.png" width="100%">
             <img src="project1/drivecommandflowchart.png" width="100%">
+            <p>This command will do slightly different things based on the arguments when it is called. This allows it to be reused in different contexts.</p>
             <h2>Vision Processing:</h2>
+            <p>For this robot, we used a similar system as the previous year to get the arm to a specific angle, but we noticed that it only allowed our robot to shoot pieces from the closest distance from the target. A greater range of setpoints would be needed to shoot from any distance. To solve this problem, I formulated a system that would automatically adjust the arm level based on a distance reading from our camera.</p>
             <p>Our robot’s front facing camera was connected to a Raspberry Pi running a vision model called PhotonVision, which could return angles describing the robot’s orientation from certain targets. Using these angles, I developed a formula that triangulated the robot’s distance from these targets.</p>
             <img src="project1/vision.jpg" alt="Vision Processing" class="vision-image" width="30%">
             <img src="project1/trianglediagram.png" alt="Triangle Diagram" class="vision-image" width="30%">
