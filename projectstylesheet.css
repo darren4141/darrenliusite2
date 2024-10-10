@@ -37,6 +37,9 @@
             text-align: center;
             padding: 20px;
         }
+        .project-text p{
+            text-align: left;
+        }
 
         ul{
             text-align: left;

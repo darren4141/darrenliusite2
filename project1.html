@@ -19,9 +19,8 @@
         <div class="project-text">
             <h1>First Robotics Competition 2024</h1>
             <p style="display: inline">The 2024 FRC game involved</p>
-            <a href="https://www.youtube.com/watch?v=9keeDyFxzY4" style="display: inline">scoring rings into different-sized goals.</a>
-            <!-- <p href="https://www.youtube.com/watch?v=9keeDyFxzY4">scoring rings into different-sized goals.</p> -->
-            <p style="display: inline"> As the team's lead programmer, I managed a team of 6 to ensure all subsystems were complete.
+            <a href="https://www.youtube.com/watch?v=9keeDyFxzY4" style="display: inline" target="_blank">scoring rings into different-sized goals.</a>
+            <p style="display: inline" target="_blank"> As the team's lead programmer, I managed a team of 6 to ensure all subsystems were complete.
             </p>
             <br>
             <img src="project1/altcover.png" width="75%">
@@ -50,10 +49,12 @@
             <!-- <h2>Wiring Diagram:</h2>
             <img src="project1/wiringdiagram.png" alt="Wiring Diagram", width="100%"> -->
             <h2>Simulation, Odometry, Data Tables</h2>
-            <img src="project1/simulation.png" alt="simulation", width="100%">
-            <!-- <p>Autonomous routine</p>
-            <p>Compound commands</p> -->
-
+            <p>In 2023, our programming team had trouble with being bottlenecked by build time, so this year I attempted to use the simulation library to allow the programming team to work in parallel while the robot was being manufactured.</p>
+            <p>For the simulation of the drivetrain on the field, the motor encoders and a gyroscope are used with odometry to report the robot's live position on the field. Additionally, an arm simulation was put together to simulate and tune PID constants and velocity and acceleration gains.</p>
+            <img src="project1/simulation.png" alt="simulation", width="90%">
+            <p>We used simulation to make custom autonomous routines with path splines:</p>
+            <img src="project1/pathplanner.gif" alt="", width="90%">
+            
         </div>
     </div>
 </body>
