@@ -28,6 +28,7 @@
             <p>This project had two main aspects, the low level code for the motor controllers, and the high level code to control the module as a whole</p>
 
             <h2>Low level code:</h2>
+            <a style="display: inline-block" href="https://github.com/darren4141/N20-PID-controller" target="_blank" rel="noopener noreferrer">Check it out!</a>
             <p>The motors used are N20 DC motors with encoders. The two motors are controlled with an L293D chip that allows for a range of inputs that will vary the voltage. Because of the need for precise control of the motor speed, we need encoders on the motor to monitor the number of revolutions and adjust the speed accordingly.</p>
             <img src="project2/pidflowchart.png" width="100%">
             <p>The speed is controlled with a PID feedback loop, which works by finding the error term (the distance away from the setpoint) as a function of time, the derivative of the error term, and the integral of the error term. In this case our setpoint would be a certain RPM:</p>
