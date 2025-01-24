@@ -14,6 +14,7 @@
         <div class="project-text">
             <h1>Differential Swerve Drive Module</h1>
             <h2 class="subtitle">2024 | In Progress</h2>
+            <p>After graduating from FIRST robotics, I decided to try and code my own differential swerve module as a fun challenge in programming control systems. Since I was directly controlling two DC motors with encoders using an STM32 and H-Bridge chip, I had to code everything from the ground up. This experience taught me to write lower level code that I took for granted in FRC</p>
 
             <img src="project2/module.jpg" width="100%">
 
@@ -27,15 +28,15 @@
             <!-- <img src="project2/encoderphase.jpg" width="100%"> -->
 
             <h2>The code:</h2>
-            <p>This project had two main aspects, the low level code for the motor controllers, and the high level code to control the module as a whole</p>
+            <a style="display: inline-block" href="https://github.com/darren4141/N20-PID-controller/blob/main/swerve.ino" target="_blank" rel="noopener noreferrer">Check it out!</a>
+            <p>This project had two main aspects, the low level motor controllers, and the high level classes that allow for the entire module to be controlled using straightforward commands</p>
 
             <h2>Low level code:</h2>
-            <a style="display: inline-block" href="https://github.com/darren4141/N20-PID-controller" target="_blank" rel="noopener noreferrer">Check it out!</a>
             <p>The motors used are N20 DC motors with encoders. The two motors are controlled with an L293D chip that allows for a range of inputs that will vary the voltage. Because of the need for precise control of the motor speed, we need encoders on the motor to monitor the number of revolutions and adjust the speed accordingly.</p>
             <img src="project2/pidflowchart.png" width="100%">
             <p>The speed is controlled with a PID feedback loop, which works by finding the error term (the distance away from the setpoint) as a function of time, the derivative of the error term, and the integral of the error term. In this case our setpoint would be a certain RPM:</p>
             <img src="project2/pidimplementationflowchart.png" width="100%">
-            <p>Using this structure, it was quite straightforward to program a simple position PID controller. The complexity came in when I tried to implement a speed controller.</p>
+            <p>Using this structure, it was quite straightforward to program a simple position PID controller. However the complexity came in when I tried to implement a speed controller.</p>
 
             <h3>Programming a speed controller</h3>
             <p>Programming a speed controller consisted of using the same PID loop described above, but instead using (target speed - current speed) as our e(t). The problem came when calculating the current speed, which was found using the formula:</p>
@@ -43,15 +44,37 @@
             <img src="project2/calculatespeed.png" width="80%">
             <p>The problem was that the clock cycles ran faster than our encoder ticks, especially at low speed, meaning the current speed would read as zero and the PID would overcompensate. This would lead to shaky movement patterns, which can be observed in this graph:</p>
             <img src="project2/zeropollrate.png" width="80%">
-            <p>This problem could be solved by polling for the speed every few cycles, instead of every cycle. Implemented as follows</p>
+            <p>This could be solved by polling for the speed every few cycles, instead of every cycle. Implemented as follows</p>
             <img src="project2/pollingrate.png" width="80%">
             <p>The following results were found with a poll rate of 30, meaning that the speed was calculated every 30 clock cycles</p>
             <img src="project2/highpollrate.png" width="80%">
-            <p>The problem with polling every few cycles is apparent: the loop is slow to react and the adjustments are blocky. This presented a new challenge of finding the lowest possible poll rate so that our PID curves would be smooth, but not low enough that our PID loop would report false zeroes. Additionally, I observed that different speeds had different optimal poll rates. So I came up with the solution of having a dynamic poll rate.</p>
+            <p>The problem with polling every few cycles is apparent: the loop is slow to react and the adjustments are blocky. This presented a new challenge. I had to find the lowest possible poll rate so that our PID curves would be smooth, but so low that our PID loop would report false zeroes. Additionally, I observed that different speeds had different optimal poll rates. So I came up with the solution of having a dynamic poll rate.</p>
             <p>With this idea, I used a few test values to construct an equation relating speed to poll rate.</p>
             <img src="project2/pollratevsspeed.png" width="80%">
-            <p>Using this equation presented a new problem, as the microcontroller would have perform computations every clock cycle, which slowed it down greatly, and since I eventually wanted the target speed to dynamically change with user input, I created a lookup table with ~400 entries so that polling rate values could be retrieved with O(1) time complexity</p>
+            <p>Using this equation presented a new challenge, as the microcontroller would have perform computations every clock cycle, which slowed it down greatly, and since I eventually wanted the target speed to dynamically change with user input, I created a lookup table with ~400 entries so that polling rate values could be retrieved with O(1) time complexity</p>
             <img src="project2/lookuptable.png" width="80%">
+<br><br>
+            <h2>High level code:</h2>
+            <p>The class structure was as follows:</p>
+            <img src="project2/classdiagram.png" width="80%" alt="">
+            <p>The motors were driven using motor classes, which contained variables for things like pins and encoder counts</p>
+            <p>The motors were then coordinated using a module class, which contained two motors, and attributes such as target angle, target speed, and current angle</p>
+            <p>The current angle was obtained using this formula</p>
+            <img src="project2/anglecalculation.png" width="80%">
+
+            <h3>Module functions:</h3>
+            <p>The module functions such as setSpeed or turnToAngle would call the motor functions together to keep them coordinated</p>
+            <img src="project2/modulefunctions.png" width="80%">
+
+            <p>Now we could define a target speed and target angle and we could make our module class could turn to the target angle, then get to the target speed, all in one update function:</p>
+            <img src="project2/updatefunction.png" width="80%">
+
+            <h3>Solving the drifting problem:</h3>
+            <p>There was still an issue: when the set speed function was running, motors 1 and 2 ran at slightly different speeds due to tiny differences, and the entire module began to drift. When the error got above 3 degrees the module would try to turn back to adjust it, causing jittery movements.</p>
+            <p>To combat this, I implemented an error adjustment algorithm in the setSpeed function. This algorithm detected when the module was drifting towards one side, and would use PID to proportionally adjust the speeds to counteract the drift and keep our module straight.</p>
+            <img src="project2/adjustedError.png" width="90%">
+            <p>This double nested PID loop ensured that the module would autocorrect itself when it drifted</p>
+            <p>Our control system now had three PID loops! One for reaching a target angle, one to reach a target speed, and one to make microadjustments and ensure our module stayed straight.</p>
         </div>
     </div>
 </body>
