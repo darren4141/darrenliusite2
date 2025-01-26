@@ -71,6 +71,8 @@
 
             <h3>Solving the drifting problem:</h3>
             <p>There was still an issue: when the set speed function was running, motors 1 and 2 ran at slightly different speeds due to tiny differences, and the entire module began to drift. When the error got above 3 degrees the module would try to turn back to adjust it, causing jittery movements.</p>
+            <img src="project2/driftjitter.png" width="65%" display="inline-block">
+            <img src="project2/drift.gif" width="30%" display="inline-block">
             <p>To combat this, I implemented an error adjustment algorithm in the setSpeed function. This algorithm detected when the module was drifting towards one side, and would use PID to proportionally adjust the speeds to counteract the drift and keep our module straight.</p>
             <img src="project2/adjustedError.png" width="90%">
             <p>This double nested PID loop ensured that the module would autocorrect itself when it drifted</p>
