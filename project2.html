@@ -80,6 +80,23 @@
             <p style="text-align: center">Resulting values:</p>
             <img src="project2/values.png" width="50%">
             <p>The module reaches a target speed of 200 while staying within 0.1 degrees of a target angle!</p>
+
+            <!-- <h3>Speeding up the PID</h3>
+            <p>Though the PID was good at keeping our module at a target speed, it was still taking too long to ramp up. To combat this, I came up with the idea of writing raw power to the module for the first few clock cycles, then switching to PID so that it only had to do small adjustments.</p>
+             -->
+
+             <h3>Creating a webpage to log data:</h3>
+             <p>One of the reasons I chose the ESP32 microcontroller for this project was for it's built in Wifi, meaning I could use it to host a webpage displaying necessary stats. I put together a quick webpage that used sliders to quickly log data and export it to a spreadsheet. Doing this made recording data a more convenient process and allowed me to collect a much higher volume of data.</p>
+             <div style="display: flex;">
+                <figure style="text-align: center;">
+                    <img src="project2/voltvsspeed.png" width="120%">
+                    <figcaption>Voltage vs Speed Graph</figcaption>
+                </figure>
+                <figure style="text-align: center;">
+                    <img src="project2/webpage.png" width="100%">
+                    <figcaption>ESP32 hosted webpage</figcaption>
+                </figure>
+            </div>
         </div>
     </div>
 </body>
