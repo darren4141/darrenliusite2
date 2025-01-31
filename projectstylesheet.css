@@ -1,55 +1,120 @@
-        /* Add some basic styling to make it look decent */
-        
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Raleway:ital,wght@0,100..900;1,100..900&family=Slabo+27px&display=swap');
-                
-        body {
-            font-family: "Raleway", sans-serif;
-            font-weight: 400;
-            font-style: normal;            
-            margin: 20px;
-        }
-        .project-content {
-            max-width: 1000px;
-            margin: 40px auto;
-            padding: 20px;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-        }
-        .close-button {
-            position: fixed;
-            top: 20px;
-            right: 30px;
-            font-size: 100px;
-            cursor: pointer;
-            text-decoration: none;
-            color: black;
-            z-index: 1;
-        }
-        .project-image {
-            width: 100%;
-            height: 300px;
-            object-fit: cover;
-            border-radius: 10px 10px 0 0;
-        }
-        .project-text {
-            text-align: center;
-            padding: 20px;
-        }
-        .project-text p{
-            text-align: left;
-        }
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Raleway:ital,wght@0,100..900;1,100..900&family=Slabo+27px&display=swap');
 
-        .subtitle{
-            color: rgb(131, 131, 131);
-        }
+body {
+    font-family: "Raleway", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    margin: 20px;
+    font-size: 18px; /* Default base font size */
+}
 
-        ul{
-            text-align: left;
-        }
+.project-content {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 20px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
 
-        
-        ol{
-            text-align: left;
-        }
+.close-button {
+    position: fixed;
+    top: 20px;
+    right: 30px;
+    font-size: 100px;
+    cursor: pointer;
+    text-decoration: none;
+    color: black;
+    z-index: 1;
+}
+
+.project-image {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 10px 10px 0 0;
+}
+
+.project-text {
+    text-align: center;
+    padding: 20px;
+}
+
+.project-text p {
+    text-align: left;
+    font-size: 18px; /* Default paragraph size */
+}
+
+.subtitle {
+    color: rgb(131, 131, 131);
+    font-size: 16px; /* Default subtitle size */
+}
+
+ul, ol {
+    text-align: left;
+    font-size: 18px; /* Default list text size */
+}
+
+/* ------ RESPONSIVE ADJUSTMENTS ------ */
+
+@media (max-width: 768px) {
+    body {
+        font-size: 12px; /* Reduce base font size */
+    }
+
+    .project-content {
+        margin: 20px auto;
+        padding: 15px;
+    }
+
+    .close-button {
+        font-size: 60px; /* Reduce close button size */
+        top: 10px;
+        right: 15px;
+    }
+
+    .project-image {
+        height: 250px; /* Slightly smaller image */
+    }
+
+    .project-text p {
+        font-size: 12px; /* Scale down paragraph */
+    }
+
+    .subtitle {
+        font-size: 10px; /* Scale down subtitle */
+    }
+
+    ul, ol {
+        font-size: 12px; /* Scale down list text */
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        font-size: 8px; /* Further reduce base font size */
+    }
+
+    .close-button {
+        font-size: 50px; /* Even smaller close button */
+        top: 5px;
+        right: 10px;
+    }
+
+    .project-image {
+        height: 200px; /* Smaller image for better scaling */
+    }
+
+    .project-text p {
+        font-size: 8px; /* Smaller paragraph text */
+    }
+
+    .subtitle {
+        font-size: 8px; /* Further reduce subtitle size */
+    }
+
+    ul, ol {
+        font-size: 8px; /* Further reduce list text */
+    }
+}
