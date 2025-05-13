@@ -12,9 +12,30 @@
         <!-- <img src="project1cover.png" alt="Project 1" class="project-image"> -->
         <div class="project-text">
             <h1>Custom Mini Drone</h1>
+            <h2 class="subtitle">2025 | In Progress</h2>
+            <p>For this project I attempted to make a mini drone fully from scratch, including the CAD, electrical layout, and controls. This project gave me valuable experience with integrating electrical, mechanical, and software systems.</p>
+            <h2>CAD Design:</h2>
             <img src="project6/cover.png" width="100%">
-            <img src="project6/PCBLayout.png" width="45%">
-            <img src="project6/Render.png" width="45%">
+            <p>For the CAD design, I tried to make something easily 3D-printable and repairable, while also being lightweight with propeller guards for safety purposes.</p>
+            <img src="project6/propellerAdapter.png" width="45%">
+            <img src="project6/DroneTop.png" width="45%">
+
+            <h2>Perf board prototype</h2>
+            <p>I soldered a prototype flight controller board for initial testing. The board was ESP32 based and communicated with an MPU6050 accelerometer using I2C. The motors are driven with MOSFETs</p>
+            <img src="project6/DroneBoardBack.png" width="45%">
+            <img src="project6/DroneBoardFront.png" width="45%">
+
+            <h2>Controls setup</h2>
+            <p>I used the built in DLPF on the IMU to get clean data readings and sent them to an ESP32 webserver to visualize the pitch and roll in 3D</p>
+            <img src="project6/GyroSetup.png" width="35%">
+            <img src="project6/GyroInterface.png" width="60%">
+            <p>This controls page featured a recalibration function, PWM motor control, and IMU data logging.</p>
+
+            <h2>Custom flight controller PCB</h2>
+            <img src="project6/DroneBoardPCB.png" width="45%">
+            <img src="project6/DroneBoardRender.png" width="45%">
+            <p>After verifying that the perf board and schematic worked, I designed a more compact flight controller PCB. It's STM-32 based and uses a shared SPI bus to communicate with a BMI270 IMU and an NRF24L01 radio module. Additionally it features bidirectional DRV motor drivers and onboard status LED's</p>
+            
         </div>
     </div>
 </body>
