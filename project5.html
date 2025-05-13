@@ -12,11 +12,15 @@
         <!-- <img src="project1cover.png" alt="Project 1" class="project-image"> -->
         <div class="project-text">
             <h1>Differential Swerve Drivetrain</h1>
+            <p>After finishing all of the controls for the single swerve module, I decided to design a full swerve drivetrain with three modules.</p>
             <img src="project5/cover.png" width="100%">
-            <img src="project5/PCBlayout.png" width="30%">
-            <img src="project5/Boardfront.png" width="30%">
-            <img src="project5/BoardBack.png" width="30%">
 
+            <h2>Breakout PCB</h2>
+            <p>I designed a custom breakout PCB that features signal filtering and power management.</p>
+            <img src="project5/DiffboardPCB.png" width="45%">
+            <img src="project5/DiffBoardRender.png" width="45%">
+            <p>One of the biggest challenges with this project was GPIO pin allocation. In hindsight I should have used some kind of pin expander but for this project I barely got away with 24 GPIO pins. I ended up driving each motor with phase-enable control using an H-Bridge and MOSFET inverter in order to conserve 1 pin per motor.</p>
+            <img src="project5/motorSchematic.png" width="60%">
         </div>
     </div>
 </body>
