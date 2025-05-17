@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PCB Render Drag Animation</title>
+  <style>
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      user-select: none;
+    }
+    img {
+      max-width: 80%;
+      height: auto;
+      cursor: grab;
+    }
+    img:active {
+      cursor: grabbing;
+    }
+  </style>
+</head>
+<body>
+
+<img id="pcb-animation" src="PCBanimation/STM32_FC_Board/board render0.png" alt="PCB Animation">
+
+<script>
+  const frameCount = 208;
+  let currentFrame = 0;
+
+  const img = document.getElementById('pcb-animation');
+
+  // Preload all images
+  const images = [];
+  for (let i = 0; i < frameCount; i++) {
+    const image = new Image();
+    image.src = `PCBanimation/STM32_FC_Board/board render${i}.png`;
+    images.push(image);
+  }
+
+  let isDragging = false;
+  let startX = 0;
+
+  function updateFrame(deltaX) {
+    // Adjust sensitivity here (higher = slower rotation)
+    const sensitivity = 5;
+    const deltaFrames = Math.floor(deltaX / sensitivity);
+    currentFrame = (currentFrame + deltaFrames + frameCount) % frameCount;
+    img.src = images[currentFrame].src;
+  }
+
+  img.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    startX = e.clientX;
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+      const deltaX = e.clientX - startX;
+      updateFrame(deltaX);
+      startX = e.clientX;
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+
+  // Optional: prevent image dragging ghost behavior
+  img.ondragstart = () => false;
+</script>
+
+</body>
+</html>
