@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 6</title>
+    <link rel="stylesheet" href="projectstylesheet.css">
+</head>
+<body>
+    <div class="project-content">
+        <a href="index.html" class="close-button">&times;</a>
+        <!-- <img src="project1cover.png" alt="Project 1" class="project-image"> -->
+        <div class="project-text">
+            <h1>My PCB's</h1>
+            <h3>(click + drag to rotate)</h3>
+
+            <h2>STM32-Based Flight Controller</h2>
+            <div class="pcb-viewer">
+                <img id="viewer1" src="PCBanimation/STM32_FC_Board/board render0.png" alt="PCB Viewer 1" width="100%">
+            </div>
+
+            <h3>Features:</h3>
+            <p>- SPI bus to interface with a BMI270 IMU and an NRF24L01 module</p>
+            <p>- 14 pin SWD programming compatible</p>
+            <p>- Bidirectional DRV motor drivers</p>
+            <p>- 3.3V LDO power regulator</p>
+            <p>- Onboard status LED's</p>
+
+            <h2>ESP32-Based Flight Controller</h2>
+            <div class="pcb-viewer">
+                <img id="viewer2" src="PCBanimation/ESP32_FC_Board/board render213.png" alt="PCB Viewer 2" width="100%">
+            </div>
+
+            <h3>Features:</h3>
+            <p>- I2C to interface with MPU6050 IMU</p>
+            <p>- USB-C programming made possible by CP2102N USB-UART bridge</p>
+            <p>- MOSFET motor drivers</p>
+            <p>- 3.3V LDO power regulator</p>
+
+            <script>
+                function createViewer(imgId, pathPrefix, minFrame, maxFrame, sensitivity = 5) {
+                const img = document.getElementById(imgId);
+                const frameCount = maxFrame - minFrame + 1;
+                let currentFrame = 0; // relative index
+                let isDragging = false;
+                let startX = 0;
+
+                // Preload images
+                const frames = [];
+                for (let i = minFrame; i <= maxFrame; i++) {
+                    const image = new Image();
+                    image.src = `${pathPrefix}${i}.png`;
+                    frames.push(image);
+                }
+
+                img.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    startX = e.clientX;
+                });
+
+                window.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    const deltaX = e.clientX - startX;
+                    const deltaFrames = Math.floor(deltaX / sensitivity);
+                    if (deltaFrames !== 0) {
+                    currentFrame = (currentFrame + deltaFrames + frameCount) % frameCount;
+                    img.src = `${pathPrefix}${minFrame + currentFrame}.png`; // Correct offset
+                    startX = e.clientX;
+                    }
+                });
+
+                window.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+
+                img.ondragstart = () => false;
+                }
+
+
+            // Initialize viewers with your custom paths and ranges
+            createViewer("viewer1", "PCBanimation/STM32_FC_Board/board render", 0, 208);
+            createViewer("viewer2", "PCBanimation/ESP32_FC_Board/board render", 213, 465);
+            </script>
+        </div>
+    </div>
+</body>
+</html>

@@ -2,76 +2,83 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PCB Render Drag Animation</title>
+  <title>Separate PCB Viewers (Vertical Layout)</title>
   <style>
     body {
       background: #111;
       display: flex;
+      flex-direction: column; /* Stack vertically */
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      gap: 40px;
       margin: 0;
       overflow: hidden;
       user-select: none;
     }
-    img {
-      max-width: 80%;
+    .pcb-viewer img {
+      max-width: 90%;
+      max-height: 100vh; /* Optional: make each viewer fit screen height */
       height: auto;
       cursor: grab;
     }
-    img:active {
+    .pcb-viewer img:active {
       cursor: grabbing;
     }
   </style>
 </head>
 <body>
 
-<img id="pcb-animation" src="PCBanimation/STM32_FC_Board/board render0.png" alt="PCB Animation">
+<div class="pcb-viewer">
+  <img id="viewer1" src="PCBanimation/STM32_FC_Board/board render0.png" alt="PCB Viewer 1">
+</div>
+
+<div class="pcb-viewer">
+  <img id="viewer2" src="PCBanimation/ESP32_FC_Board/board render213.png" alt="PCB Viewer 2">
+</div>
 
 <script>
-  const frameCount = 208;
-  let currentFrame = 0;
+    function createViewer(imgId, pathPrefix, minFrame, maxFrame, sensitivity = 5) {
+    const img = document.getElementById(imgId);
+    const frameCount = maxFrame - minFrame + 1;
+    let currentFrame = 0; // relative index
+    let isDragging = false;
+    let startX = 0;
 
-  const img = document.getElementById('pcb-animation');
-
-  // Preload all images
-  const images = [];
-  for (let i = 0; i < frameCount; i++) {
-    const image = new Image();
-    image.src = `PCBanimation/STM32_FC_Board/board render${i}.png`;
-    images.push(image);
-  }
-
-  let isDragging = false;
-  let startX = 0;
-
-  function updateFrame(deltaX) {
-    // Adjust sensitivity here (higher = slower rotation)
-    const sensitivity = 5;
-    const deltaFrames = Math.floor(deltaX / sensitivity);
-    currentFrame = (currentFrame + deltaFrames + frameCount) % frameCount;
-    img.src = images[currentFrame].src;
-  }
-
-  img.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    startX = e.clientX;
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (isDragging) {
-      const deltaX = e.clientX - startX;
-      updateFrame(deltaX);
-      startX = e.clientX;
+    // Preload images
+    const frames = [];
+    for (let i = minFrame; i <= maxFrame; i++) {
+        const image = new Image();
+        image.src = `${pathPrefix}${i}.png`;
+        frames.push(image);
     }
-  });
 
-  window.addEventListener('mouseup', () => {
-    isDragging = false;
-  });
+    img.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX;
+    });
 
-  // Optional: prevent image dragging ghost behavior
-  img.ondragstart = () => false;
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaX = e.clientX - startX;
+        const deltaFrames = Math.floor(deltaX / sensitivity);
+        if (deltaFrames !== 0) {
+        currentFrame = (currentFrame + deltaFrames + frameCount) % frameCount;
+        img.src = `${pathPrefix}${minFrame + currentFrame}.png`; // Correct offset
+        startX = e.clientX;
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+    });
+
+    img.ondragstart = () => false;
+    }
+
+
+  // Initialize viewers with your custom paths and ranges
+  createViewer("viewer1", "PCBanimation/STM32_FC_Board/board render", 0, 208);
+  createViewer("viewer2", "PCBanimation/ESP32_FC_Board/board render", 213, 460);
 </script>
 
 </body>
