@@ -46,6 +46,16 @@
             <p>- Phase-enable drive for 6 motors using L293D H-Bridges and MOSFET inverters</p>
             <p>- Buck converter setup to step 9V down to 6V + 3.3V LDO regulator</p>
 
+        
+            <h2>Coil Driver Board</h2>
+            <div class="pcb-viewer">
+                <img id="viewer4" src="PCBanimation/Coil_Driver_Board/board render0.png" alt="PCB Viewer 3" width="100%">
+            </div>
+
+            <h3>Features:</h3>
+            <p>- IR sensor with adjustable sensitivity</p>
+            <p>- OP-AMP based coil driver</p>
+
             <script>
                 function createViewer(imgId, pathPrefix, minFrame, maxFrame, sensitivity = 5) {
                 const img = document.getElementById(imgId);
@@ -90,6 +100,7 @@
             createViewer("viewer1", "PCBanimation/STM32_FC_Board/board render", 0, 208);
             createViewer("viewer2", "PCBanimation/ESP32_FC_Board/board render", 213, 465);
             createViewer("viewer3", "PCBanimation/Diff_Breakout_Board/board render", 0, 250);
+            createViewer("viewer4", "PCBanimation/Coil_Driver_Board/board render", 0, 208);
             </script>
         </div>
     </div>
