@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Project 6</title>
   <link rel="stylesheet" href="projectstylesheet.css" />
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@kicanvas/standalone@latest/dist/kicanvas-embed.min.js"></script>
-
+  <script type="module" src="/kicanvas.js"></script>
   <style>
     .modal {
       display: none;
@@ -18,7 +17,6 @@
       justify-content: center;
       align-items: center;
     }
-
     .modal-content {
       background-color: #fff;
       width: 85%;
@@ -29,12 +27,10 @@
       display: flex;
       flex-direction: column;
     }
-
     .modal-content kicanvas-embed {
       flex: 1;
       border: none;
     }
-
     .close-button-modal {
       position: absolute;
       top: 10px;
@@ -47,18 +43,17 @@
       color: #333;
       z-index: 1000;
     }
-
     .close-button-modal:hover {
       color: red;
     }
-
-    button.view-btn {
+    .view-btn {
       margin-top: 10px;
       padding: 8px 16px;
       font-size: 14px;
       cursor: pointer;
     }
   </style>
+
 </head>
 <body>
   <div class="project-content">
@@ -70,7 +65,7 @@
       <!-- STM32 -->
       <h2>STM32-Based Flight Controller</h2>
       <div class="pcb-viewer">
-        <img id="viewer1" src="PCBanimation/STM32_FC_Board/board render0.webp" width="100%">
+        <img id="viewer1" src="PCBanimation/STM32_FC_Board/board render0.webp" alt="PCB Viewer 1" width="100%">
         <button class="view-btn" onclick="showModal('modal-stm32')">View Schematic</button>
       </div>
       <h3>Features:</h3>
@@ -83,7 +78,7 @@
       <!-- ESP32 -->
       <h2>ESP32-Based Flight Controller</h2>
       <div class="pcb-viewer">
-        <img id="viewer2" src="PCBanimation/ESP32_FC_Board/board render213.webp" width="100%">
+        <img id="viewer2" src="PCBanimation/ESP32_FC_Board/board render213.webp" alt="PCB Viewer 2" width="100%">
         <button class="view-btn" onclick="showModal('modal-esp32')">View Schematic</button>
       </div>
       <h3>Features:</h3>
@@ -95,7 +90,7 @@
       <!-- Differential Breakout -->
       <h2>Differential Drivetrain Breakout Board</h2>
       <div class="pcb-viewer">
-        <img id="viewer3" src="PCBanimation/Diff_Breakout_Board/board render0.webp" width="100%">
+        <img id="viewer3" src="PCBanimation/Diff_Breakout_Board/board render0.webp" alt="PCB Viewer 3" width="100%">
         <button class="view-btn" onclick="showModal('modal-diff')">View Schematic</button>
       </div>
       <h3>Features:</h3>
@@ -105,7 +100,7 @@
       <!-- Coil Driver -->
       <h2>Coil Driver Board</h2>
       <div class="pcb-viewer">
-        <img id="viewer4" src="PCBanimation/Coil_Driver_Board/board render0.webp" width="100%">
+        <img id="viewer4" src="PCBanimation/Coil_Driver_Board/board render0.webp" alt="PCB Viewer 4" width="100%">
         <button class="view-btn" onclick="showModal('modal-coil')">View Schematic</button>
       </div>
       <h3>Features:</h3>
@@ -114,44 +109,39 @@
     </div>
   </div>
 
-  <!-- Modal: STM32 -->
+  <!-- Modals -->
   <div id="modal-stm32" class="modal">
     <div class="modal-content">
       <button class="close-button-modal" onclick="hideModal('modal-stm32')">&times;</button>
       <kicanvas-embed controls="full" theme="kicad">
-        <kicanvas-source src="schematics/stm32_fc.kicad_sch"></kicanvas-source>
-        <kicanvas-source src="schematics/stm32_fc_power.kicad_sch"></kicanvas-source>
+        <kicanvas-source src="https://raw.githubusercontent.com/darren4141/darrenliusite2/main/schematics/stm32_fc.kicad_sch"></kicanvas-source>
       </kicanvas-embed>
     </div>
   </div>
 
-  <!-- Modal: ESP32 -->
   <div id="modal-esp32" class="modal">
     <div class="modal-content">
       <button class="close-button-modal" onclick="hideModal('modal-esp32')">&times;</button>
       <kicanvas-embed controls="full" theme="kicad">
-        <kicanvas-source src="schematics/esp32_fc.kicad_sch"></kicanvas-source>
-        <kicanvas-source src="schematics/esp32_fc_usb.kicad_sch"></kicanvas-source>
+        <kicanvas-source src="https://raw.githubusercontent.com/darren4141/darrenliusite2/main/schematics/esp32_fc.kicad_sch"></kicanvas-source>
       </kicanvas-embed>
     </div>
   </div>
 
-  <!-- Modal: Differential Breakout -->
   <div id="modal-diff" class="modal">
     <div class="modal-content">
       <button class="close-button-modal" onclick="hideModal('modal-diff')">&times;</button>
       <kicanvas-embed controls="full" theme="kicad">
-        <kicanvas-source src="schematics/diff_breakout.kicad_sch"></kicanvas-source>
+        <kicanvas-source src="https://raw.githubusercontent.com/darren4141/darrenliusite2/main/schematics/diff_breakout.kicad_sch"></kicanvas-source>
       </kicanvas-embed>
     </div>
   </div>
 
-  <!-- Modal: Coil Driver -->
   <div id="modal-coil" class="modal">
     <div class="modal-content">
       <button class="close-button-modal" onclick="hideModal('modal-coil')">&times;</button>
       <kicanvas-embed controls="full" theme="kicad">
-        <kicanvas-source src="schematics/coil_driver.kicad_sch"></kicanvas-source>
+  <kicanvas-source src="https://raw.githubusercontent.com/darren4141/darrenliusite2/main/schematics/coil_driver.kicad_sch"></kicanvas-source>
       </kicanvas-embed>
     </div>
   </div>
