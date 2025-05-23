@@ -5,6 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Project 6</title>
   <link rel="stylesheet" href="projectstylesheet.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@kicanvas/standalone@latest/dist/kicanvas-embed.min.js"></script>
+
+  <style>
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0; top: 0;
+      width: 100vw; height: 100vh;
+      background-color: rgba(0, 0, 0, 0.85);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background-color: #fff;
+      width: 85%;
+      height: 90%;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-content kicanvas-embed {
+      flex: 1;
+      border: none;
+    }
+
+    .close-button-modal {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 28px;
+      font-weight: bold;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #333;
+      z-index: 1000;
+    }
+
+    .close-button-modal:hover {
+      color: red;
+    }
+
+    button.view-btn {
+      margin-top: 10px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
   <div class="project-content">
@@ -13,9 +67,11 @@
       <h1>My PCB's</h1>
       <h3>(click + drag to rotate)</h3>
 
+      <!-- STM32 -->
       <h2>STM32-Based Flight Controller</h2>
       <div class="pcb-viewer">
-        <img id="viewer1" src="PCBanimation/STM32_FC_Board/board render0.webp" alt="PCB Viewer 1" width="100%">
+        <img id="viewer1" src="PCBanimation/STM32_FC_Board/board render0.webp" width="100%">
+        <button class="view-btn" onclick="showModal('modal-stm32')">View Schematic</button>
       </div>
       <h3>Features:</h3>
       <p>- SPI bus to interface with a BMI270 IMU and an NRF24L01 module</p>
@@ -24,9 +80,11 @@
       <p>- 3.3V LDO power regulator</p>
       <p>- Onboard status LED's</p>
 
+      <!-- ESP32 -->
       <h2>ESP32-Based Flight Controller</h2>
       <div class="pcb-viewer">
-        <img id="viewer2" src="PCBanimation/ESP32_FC_Board/board render213.webp" alt="PCB Viewer 2" width="100%">
+        <img id="viewer2" src="PCBanimation/ESP32_FC_Board/board render213.webp" width="100%">
+        <button class="view-btn" onclick="showModal('modal-esp32')">View Schematic</button>
       </div>
       <h3>Features:</h3>
       <p>- I2C to interface with MPU6050 IMU</p>
@@ -34,17 +92,21 @@
       <p>- MOSFET motor drivers</p>
       <p>- 3.3V LDO power regulator</p>
 
+      <!-- Differential Breakout -->
       <h2>Differential Drivetrain Breakout Board</h2>
       <div class="pcb-viewer">
-        <img id="viewer3" src="PCBanimation/Diff_Breakout_Board/board render0.webp" alt="PCB Viewer 3" width="100%">
+        <img id="viewer3" src="PCBanimation/Diff_Breakout_Board/board render0.webp" width="100%">
+        <button class="view-btn" onclick="showModal('modal-diff')">View Schematic</button>
       </div>
       <h3>Features:</h3>
       <p>- Phase-enable drive for 6 motors using L293D H-Bridges and MOSFET inverters</p>
       <p>- Buck converter setup to step 9V down to 6V + 3.3V LDO regulator</p>
 
+      <!-- Coil Driver -->
       <h2>Coil Driver Board</h2>
       <div class="pcb-viewer">
-        <img id="viewer4" src="PCBanimation/Coil_Driver_Board/board render0.webp" alt="PCB Viewer 4" width="100%">
+        <img id="viewer4" src="PCBanimation/Coil_Driver_Board/board render0.webp" width="100%">
+        <button class="view-btn" onclick="showModal('modal-coil')">View Schematic</button>
       </div>
       <h3>Features:</h3>
       <p>- IR sensor with adjustable sensitivity</p>
@@ -52,7 +114,57 @@
     </div>
   </div>
 
+  <!-- Modal: STM32 -->
+  <div id="modal-stm32" class="modal">
+    <div class="modal-content">
+      <button class="close-button-modal" onclick="hideModal('modal-stm32')">&times;</button>
+      <kicanvas-embed controls="full" theme="kicad">
+        <kicanvas-source src="schematics/stm32_fc.kicad_sch"></kicanvas-source>
+        <kicanvas-source src="schematics/stm32_fc_power.kicad_sch"></kicanvas-source>
+      </kicanvas-embed>
+    </div>
+  </div>
+
+  <!-- Modal: ESP32 -->
+  <div id="modal-esp32" class="modal">
+    <div class="modal-content">
+      <button class="close-button-modal" onclick="hideModal('modal-esp32')">&times;</button>
+      <kicanvas-embed controls="full" theme="kicad">
+        <kicanvas-source src="schematics/esp32_fc.kicad_sch"></kicanvas-source>
+        <kicanvas-source src="schematics/esp32_fc_usb.kicad_sch"></kicanvas-source>
+      </kicanvas-embed>
+    </div>
+  </div>
+
+  <!-- Modal: Differential Breakout -->
+  <div id="modal-diff" class="modal">
+    <div class="modal-content">
+      <button class="close-button-modal" onclick="hideModal('modal-diff')">&times;</button>
+      <kicanvas-embed controls="full" theme="kicad">
+        <kicanvas-source src="schematics/diff_breakout.kicad_sch"></kicanvas-source>
+      </kicanvas-embed>
+    </div>
+  </div>
+
+  <!-- Modal: Coil Driver -->
+  <div id="modal-coil" class="modal">
+    <div class="modal-content">
+      <button class="close-button-modal" onclick="hideModal('modal-coil')">&times;</button>
+      <kicanvas-embed controls="full" theme="kicad">
+        <kicanvas-source src="schematics/coil_driver.kicad_sch"></kicanvas-source>
+      </kicanvas-embed>
+    </div>
+  </div>
+
   <script>
+    function showModal(id) {
+      document.getElementById(id).style.display = "flex";
+    }
+
+    function hideModal(id) {
+      document.getElementById(id).style.display = "none";
+    }
+
     function preloadFrames(pathPrefix, minFrame, maxFrame, delay = 10) {
       let i = minFrame + 1;
       function loadNext() {
@@ -102,7 +214,6 @@
       img.ondragstart = () => false;
     }
 
-    // Initialize all viewers
     createViewer("viewer1", "PCBanimation/STM32_FC_Board/board render", 0, 208);
     createViewer("viewer2", "PCBanimation/ESP32_FC_Board/board render", 213, 465);
     createViewer("viewer3", "PCBanimation/Diff_Breakout_Board/board render", 0, 250);
