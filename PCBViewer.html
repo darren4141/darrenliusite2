@@ -31,29 +31,14 @@
       flex: 1;
       border: none;
     }
-    .close-button-modal {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 28px;
-      font-weight: bold;
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: #333;
-      z-index: 1000;
-    }
-    .close-button-modal:hover {
-      color: red;
-    }
     .view-btn {
       margin-top: 10px;
+      margin-right: 10px;
       padding: 8px 16px;
       font-size: 14px;
       cursor: pointer;
     }
   </style>
-
 </head>
 <body>
   <div class="project-content">
@@ -62,98 +47,96 @@
       <h1>My PCB's</h1>
       <h3>(click + drag to rotate)</h3>
 
-      <!-- STM32 -->
-      <h2>STM32-Based Flight Controller</h2>
+      <!-- Project Template -->
+      <!-- Repeat for STM32, ESP32, Diff, Coil -->
       <div class="pcb-viewer">
+        <h2>STM32-Based Flight Controller</h2>
         <img id="viewer1" src="PCBanimation/STM32_FC_Board/board render0.webp" alt="PCB Viewer 1" width="100%">
         <button class="view-btn" onclick="showModal('modal-stm32')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-stm32-pcb')">View PCB Layout</button>
+        <h3>Features:</h3>
+        <p>- SPI bus to interface with a BMI270 IMU and an NRF24L01 module</p>
+        <p>- 14 pin SWD programming compatible</p>
+        <p>- Bidirectional DRV motor drivers</p>
+        <p>- 3.3V LDO power regulator</p>
+        <p>- Onboard status LED's</p>
       </div>
-      <h3>Features:</h3>
-      <p>- SPI bus to interface with a BMI270 IMU and an NRF24L01 module</p>
-      <p>- 14 pin SWD programming compatible</p>
-      <p>- Bidirectional DRV motor drivers</p>
-      <p>- 3.3V LDO power regulator</p>
-      <p>- Onboard status LED's</p>
 
-      <!-- ESP32 -->
-      <h2>ESP32-Based Flight Controller</h2>
       <div class="pcb-viewer">
+        <h2>ESP32-Based Flight Controller</h2>
         <img id="viewer2" src="PCBanimation/ESP32_FC_Board/board render213.webp" alt="PCB Viewer 2" width="100%">
         <button class="view-btn" onclick="showModal('modal-esp32')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-esp32-pcb')">View PCB Layout</button>
+        <h3>Features:</h3>
+        <p>- I2C to interface with MPU6050 IMU</p>
+        <p>- USB-C programming made possible by CP2102N USB-UART bridge</p>
+        <p>- MOSFET motor drivers</p>
+        <p>- 3.3V LDO power regulator</p>
       </div>
-      <h3>Features:</h3>
-      <p>- I2C to interface with MPU6050 IMU</p>
-      <p>- USB-C programming made possible by CP2102N USB-UART bridge</p>
-      <p>- MOSFET motor drivers</p>
-      <p>- 3.3V LDO power regulator</p>
 
-      <!-- Differential Breakout -->
-      <h2>Differential Drivetrain Breakout Board</h2>
       <div class="pcb-viewer">
+        <h2>Differential Drivetrain Breakout Board</h2>
         <img id="viewer3" src="PCBanimation/Diff_Breakout_Board/board render0.webp" alt="PCB Viewer 3" width="100%">
         <button class="view-btn" onclick="showModal('modal-diff')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-diff-pcb')">View PCB Layout</button>
+        <h3>Features:</h3>
+        <p>- Phase-enable drive for 6 motors using L293D H-Bridges and MOSFET inverters</p>
+        <p>- Buck converter setup to step 9V down to 6V + 3.3V LDO regulator</p>
       </div>
-      <h3>Features:</h3>
-      <p>- Phase-enable drive for 6 motors using L293D H-Bridges and MOSFET inverters</p>
-      <p>- Buck converter setup to step 9V down to 6V + 3.3V LDO regulator</p>
 
-      <!-- Coil Driver -->
-      <h2>Coil Driver Board</h2>
       <div class="pcb-viewer">
+        <h2>Coil Driver Board</h2>
         <img id="viewer4" src="PCBanimation/Coil_Driver_Board/board render0.webp" alt="PCB Viewer 4" width="100%">
         <button class="view-btn" onclick="showModal('modal-coil')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-coil-pcb')">View PCB Layout</button>
+        <h3>Features:</h3>
+        <p>- IR sensor with adjustable sensitivity</p>
+        <p>- OP-AMP based coil driver</p>
       </div>
-      <h3>Features:</h3>
-      <p>- IR sensor with adjustable sensitivity</p>
-      <p>- OP-AMP based coil driver</p>
     </div>
   </div>
 
   <!-- Modals -->
-  <div id="modal-stm32" class="modal">
-    <div class="modal-content">
-      <button class="close-button-modal" onclick="hideModal('modal-stm32')">&times;</button>
-      <kicanvas-embed controls="full" theme="kicad">
-        <kicanvas-source src="https://darren4141.github.io/darrenliusite2/schematics/stm32_fc.kicad_sch"></kicanvas-source>
-      </kicanvas-embed>
-    </div>
-  </div>
+  <!-- Repeat for each schematic and PCB layout -->
+  <div id="modal-stm32" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="schematics/stm32_fc.kicad_sch"></kicanvas-source></kicanvas-embed></div></div>
+  <div id="modal-stm32-pcb" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="layouts/stm32_fc.kicad_pcb"></kicanvas-source></kicanvas-embed></div></div>
 
-  <div id="modal-esp32" class="modal">
-    <div class="modal-content">
-      <button class="close-button-modal" onclick="hideModal('modal-esp32')">&times;</button>
-      <kicanvas-embed controls="full" theme="kicad">
-        <kicanvas-source src="https://darren4141.github.io/darrenliusite2/schematics/esp32_fc.kicad_sch"></kicanvas-source>
-      </kicanvas-embed>
-    </div>
-  </div>
+  <div id="modal-esp32" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="schematics/esp32_fc.kicad_sch"></kicanvas-source></kicanvas-embed></div></div>
+  <div id="modal-esp32-pcb" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="layouts/esp32_fc.kicad_pcb"></kicanvas-source></kicanvas-embed></div></div>
 
-  <div id="modal-diff" class="modal">
-    <div class="modal-content">
-      <button class="close-button-modal" onclick="hideModal('modal-diff')">&times;</button>
-      <kicanvas-embed controls="full" theme="kicad">
-        <kicanvas-source src="https://raw.githubusercontent.com/darren4141/darrenliusite2/main/schematics/diff_breakout.kicad_sch"></kicanvas-source>
-      </kicanvas-embed>
-    </div>
-  </div>
+  <div id="modal-diff" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="schematics/diff_breakout.kicad_sch"></kicanvas-source></kicanvas-embed></div></div>
+  <div id="modal-diff-pcb" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="layouts/diff_breakout.kicad_pcb"></kicanvas-source></kicanvas-embed></div></div>
 
-  <div id="modal-coil" class="modal">
-    <div class="modal-content">
-      <button class="close-button-modal" onclick="hideModal('modal-coil')">&times;</button>
-      <kicanvas-embed controls="full" theme="kicad">
-  <kicanvas-source src="https://raw.githubusercontent.com/darren4141/darrenliusite2/main/schematics/coil_driver.kicad_sch"></kicanvas-source>
-      </kicanvas-embed>
-    </div>
-  </div>
+  <div id="modal-coil" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="schematics/coil_driver.kicad_sch"></kicanvas-source></kicanvas-embed></div></div>
+  <div id="modal-coil-pcb" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="layouts/coil_driver.kicad_pcb"></kicanvas-source></kicanvas-embed></div></div>
 
   <script>
     function showModal(id) {
-      document.getElementById(id).style.display = "flex";
+      const modal = document.getElementById(id);
+      modal.style.display = "flex";
+      function outsideClickHandler(e) {
+        if (e.target === modal) {
+          hideModal(id);
+          modal.removeEventListener('click', outsideClickHandler);
+        }
+      }
+      setTimeout(() => {
+        modal.addEventListener('click', outsideClickHandler);
+      }, 0);
     }
 
     function hideModal(id) {
       document.getElementById(id).style.display = "none";
     }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        const openModal = document.querySelector('.modal[style*="display: flex"]');
+        if (openModal) {
+          openModal.style.display = 'none';
+        }
+      }
+    });
 
     function preloadFrames(pathPrefix, minFrame, maxFrame, delay = 10) {
       let i = minFrame + 1;
@@ -208,6 +191,7 @@
     createViewer("viewer2", "PCBanimation/ESP32_FC_Board/board render", 213, 465);
     createViewer("viewer3", "PCBanimation/Diff_Breakout_Board/board render", 0, 250);
     createViewer("viewer4", "PCBanimation/Coil_Driver_Board/board render", 0, 208);
+    
   </script>
 </body>
 </html>
