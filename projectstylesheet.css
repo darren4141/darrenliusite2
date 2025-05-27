@@ -1,21 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Raleway:ital,wght@0,100..900;1,100..900&family=Slabo+27px&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap');
+
+:root {
+    /* === Color Palette === */
+    --color-bg: #D1D5DB;              /* Deeper light grey background */
+    --color-surface: #F1F3F5;         /* Cards/containers - softer white */
+    --color-surface-alt: #DADDE1;     /* Alternate surface for project sections */
+    --color-text: #1F1F1F;            /* Dark grey, almost black */
+    --color-muted: #5E636E;           /* Muted/subtitle text */
+    --color-accent: #3B82F6;          /* Stronger blue accent (accessible and modern) */
+    --color-border: #B8BCC4;          /* Defined soft border */
+    --color-overlay: rgba(0, 0, 0, 0.06); /* Soft hover overlay */
+    --color-white: #FFFFFF;
+    --color-black: #000000;
+
+    /* === Font Families === */
+    --font-primary: "Exo 2", sans-serif;
+    --font-heading: 'Exo 2', sans-serif;
+
+}
 
 body {
-    font-family: "Raleway", sans-serif;
+    font-family: var(--font-primary);
     font-weight: 400;
     font-style: normal;
     margin: 20px;
-    font-size: 18px; /* Default base font size */
+    font-size: 18px;
+    background-color: var(--color-bg);
+    color: var(--color-text);
 }
 
 .project-content {
     max-width: 1000px;
     margin: 40px auto;
     padding: 20px;
-    background-color: #fff;
-    border: 1px solid #ddd;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 10px var(--color-shadow);
 }
 
 .close-button {
@@ -25,7 +46,7 @@ body {
     font-size: 100px;
     cursor: pointer;
     text-decoration: none;
-    color: black;
+    color: var(--color-black);
     z-index: 1;
 }
 
@@ -39,28 +60,34 @@ body {
 .project-text {
     text-align: center;
     padding: 20px;
+    background-color: var(--color-surface-alt); /* NEW background color */
+}
+
+.project-content {
+    background-color: var(--color-surface-alt); /* NEW background color */
 }
 
 .project-text p {
     text-align: left;
-    font-size: 18px; /* Default paragraph size */
+    font-size: 18px;
 }
 
 .subtitle {
-    color: rgb(131, 131, 131);
-    font-size: 16px; /* Default subtitle size */
+    color: var(--color-muted);
+    font-size: 16px;
 }
 
 ul, ol {
     text-align: left;
-    font-size: 18px; /* Default list text size */
+    font-size: 18px;
+    color: var(--color-text);
 }
 
 /* ------ RESPONSIVE ADJUSTMENTS ------ */
 
 @media (max-width: 768px) {
     body {
-        font-size: 12px; /* Reduce base font size */
+        font-size: 12px;
     }
 
     .project-content {
@@ -69,52 +96,52 @@ ul, ol {
     }
 
     .close-button {
-        font-size: 60px; /* Reduce close button size */
+        font-size: 60px;
         top: 10px;
         right: 15px;
     }
 
     .project-image {
-        height: 250px; /* Slightly smaller image */
+        height: 250px;
     }
 
     .project-text p {
-        font-size: 12px; /* Scale down paragraph */
+        font-size: 12px;
     }
 
     .subtitle {
-        font-size: 10px; /* Scale down subtitle */
+        font-size: 10px;
     }
 
     ul, ol {
-        font-size: 12px; /* Scale down list text */
+        font-size: 12px;
     }
 }
 
 @media (max-width: 480px) {
     body {
-        font-size: 8px; /* Further reduce base font size */
+        font-size: 8px;
     }
 
     .close-button {
-        font-size: 50px; /* Even smaller close button */
+        font-size: 50px;
         top: 5px;
         right: 10px;
     }
 
     .project-image {
-        height: 200px; /* Smaller image for better scaling */
+        height: 200px;
     }
 
     .project-text p {
-        font-size: 8px; /* Smaller paragraph text */
+        font-size: 8px;
     }
 
     .subtitle {
-        font-size: 8px; /* Further reduce subtitle size */
+        font-size: 8px;
     }
 
     ul, ol {
-        font-size: 8px; /* Further reduce list text */
+        font-size: 8px;
     }
 }
