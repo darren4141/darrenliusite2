@@ -1,27 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project 5</title>
-    <link rel="stylesheet" href="projectstylesheet.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Project 5</title>
+  <link rel="stylesheet" href="projectstylesheet.css"/>
+
+  <style>
+    #model-viewer {
+      width: 100%;
+      height: 500px;
+      border: 1px solid #ccc;
+      margin-bottom: 1rem;
+    }
+  </style>
 </head>
 <body>
-    <div class="project-content">
-        <a href="index.html" class="close-button">&times;</a>
-        <!-- <img src="project1cover.png" alt="Project 1" class="project-image"> -->
-        <div class="project-text">
-            <h1>Differential Swerve Drivetrain</h1>
-            <p>After finishing all of the controls for the single swerve module, I decided to design a full swerve drivetrain with three modules.</p>
-            <img src="project5/cover.png" width="100%">
+  <div class="project-content">
+    <a href="index.html" class="close-button">&times;</a>
+    <div class="project-text">
+      <h1>Differential Swerve Drivetrain</h1>
+      <p>After finishing all of the controls for the single swerve module, I decided to design a full swerve drivetrain with three modules.</p>
 
-            <h2>Breakout PCB</h2>
-            <p>I designed a custom breakout PCB that features signal filtering and power management.</p>
-            <img src="project5/DiffboardPCB.png" width="45%">
-            <img src="project5/DiffBoardRender.png" width="45%">
-            <p>One of the biggest challenges with this project was GPIO pin allocation. In hindsight I should have used some kind of pin expander but for this project I barely got away with 24 GPIO pins. I ended up driving each motor with phase-enable control using an H-Bridge and MOSFET inverter in order to conserve 1 pin per motor.</p>
-            <img src="project5/motorSchematic.png" width="60%">
-        </div>
+      <div id="model-viewer"></div>
+
+      <h2>Breakout PCB</h2>
+      <p>I designed a custom breakout PCB that features signal filtering and power management.</p>
+      <img src="project5/DiffboardPCB.png" width="45%">
+      <img src="project5/DiffBoardRender.png" width="45%">
+      <p>One of the biggest challenges with this project was GPIO pin allocation. In hindsight I should have used some kind of pin expander but for this project I barely got away with 24 GPIO pins. I ended up driving each motor with phase-enable control using an H-Bridge and MOSFET inverter in order to conserve 1 pin per motor.</p>
+      <img src="project5/motorSchematic.png" width="60%">
     </div>
+  </div>
+
+  <script type="module">
+    console.log("Viewer script loaded");
+    import * as THREE from './libs/three.module.js';
+    import { GLTFLoader } from './libs/GLTFLoader.js';
+    import { OrbitControls } from './libs/OrbitControls.js';
+
+
+    const container = document.getElementById('model-viewer');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf0f0f0);
+
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+    camera.position.set(2, 2, 5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+    scene.add(light);
+
+    const loader = new GLTFLoader();
+    loader.load('project5/model.glb', (gltf) => {
+    const model = gltf.scene;
+    scene.add(model);
+
+    // Compute bounding box of the model
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3()).length();
+    const center = box.getCenter(new THREE.Vector3());
+
+    // Reposition the camera to fit the object
+    camera.position.copy(center.clone().add(new THREE.Vector3(size / 2.5, size / 2.5, size / 2.5)));
+    camera.lookAt(center);
+
+    // Optionally reposition the controls target
+    controls.target.copy(center);
+    controls.update();
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    });
+  </script>
 </body>
 </html>
