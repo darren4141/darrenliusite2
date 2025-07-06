@@ -29,14 +29,14 @@
             <p>I used the built in DLPF on the IMU to get clean data readings and sent them to an ESP32 webserver to visualize the pitch and roll in 3D</p>
             <img src="project6/GyroSetup.png" width="35%">
             <img src="project6/GyroInterface.png" width="60%">
-            <p>This controls page featured a recalibration function, PWM motor control, and IMU data logging.</p>
+            <p>This controls page featured a re-zeroing function that averages the past 10 IMU readings to zero, PWM motor control, and IMU data logging.</p>
 
             <h2>Custom flight controller PCB</h2>
             <img src="project6/DroneBoardPCB.png" width="45%">
             <img src="project6/DroneBoardRender.png" width="45%">
             <p>After verifying that the perf board and schematic worked, I designed a more compact flight controller PCB. It's STM-32 based and uses a shared SPI bus to communicate with a BMI270 IMU and an NRF24L01 radio module. Additionally it features bidirectional DRV motor drivers and onboard status LED's</p>
             
-            <p>Additionoally I designed a simple driver board for the BMI270 IMU so I could easily test it and write firmware quicker.</p>
+            <p>Additionally I designed a simple driver board for the BMI270 IMU so I could easily test it and write firmware quicker.</p>
             <img src="project6/BMIboardPCB.png" width="45%">
             <img src="project6/BMIboardrender.png" width="45%">
         </div>
