@@ -3,42 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Project 6</title>
+  <title>My PCB Projects</title>
   <link rel="stylesheet" href="projectstylesheet.css" />
+  <link rel="stylesheet" href="pcbviewer.css" />
   <script type="module" src="kicanvas.js"></script>
-  <style>
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 999;
-      left: 0; top: 0;
-      width: 100vw; height: 100vh;
-      background-color: rgba(0, 0, 0, 0.85);
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background-color: #fff;
-      width: 85%;
-      height: 90%;
-      border-radius: 10px;
-      overflow: hidden;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-    }
-    .modal-content kicanvas-embed {
-      flex: 1;
-      border: none;
-    }
-    .view-btn {
-      margin-top: 10px;
-      margin-right: 10px;
-      padding: 8px 16px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-  </style>
+  <script src="pcbviewer.js" defer></script>
 </head>
 <body>
   <div class="project-content">
@@ -47,13 +16,12 @@
       <h1>My PCB's</h1>
       <h3>(click + drag to rotate)</h3>
 
-      <!-- Project Template -->
-      <!-- Repeat for STM32, ESP32, Diff, Coil -->
+      <!-- STM32 -->
       <div class="pcb-viewer">
         <h2>STM32-Based Flight Controller</h2>
-        <img id="viewer1" src="PCBanimation/STM32_FC_Board/board render0.webp" alt="PCB Viewer 1" width="100%">
+        <img id="viewer1" src="PCBanimation/STM32_FC_Board/board render0.webp" alt="STM32 Viewer" width="100%">
         <button class="view-btn" onclick="resetViewer(0)">Reset View</button>
-        <button class="view-btn" id="toggle-rotate-0" onclick="toggleRotation(0)">Rotation: ON</button> 
+        <button class="view-btn" id="toggle-rotate-0" onclick="toggleRotation(0)">Rotation: ON</button>
         <button class="view-btn" onclick="showModal('modal-stm32')">View Schematic</button>
         <button class="view-btn" onclick="showModal('modal-stm32-pcb')">View PCB Layout</button>
         <h3>Features:</h3>
@@ -63,12 +31,13 @@
         <p>- 3.3V LDO power regulator</p>
         <p>- Onboard status LED's</p>
       </div>
-      
+
+      <!-- ESP32 -->
       <div class="pcb-viewer">
         <h2>ESP32-Based Flight Controller</h2>
-        <img id="viewer2" src="PCBanimation/ESP32_FC_Board/board render213.webp" alt="PCB Viewer 2" width="100%">
+        <img id="viewer2" src="PCBanimation/ESP32_FC_Board/board render213.webp" alt="ESP32 Viewer" width="100%">
         <button class="view-btn" onclick="resetViewer(1)">Reset View</button>
-        <button class="view-btn" id="toggle-rotate-1" onclick="toggleRotation(1)">Rotation: ON</button> 
+        <button class="view-btn" id="toggle-rotate-1" onclick="toggleRotation(1)">Rotation: ON</button>
         <button class="view-btn" onclick="showModal('modal-esp32')">View Schematic</button>
         <button class="view-btn" onclick="showModal('modal-esp32-pcb')">View PCB Layout</button>
         <h3>Features:</h3>
@@ -79,12 +48,13 @@
         <p>- Automatic source switching for input from either 5V USB input or 3.7V battery input with anti-backfeeding</p>
         <p>- Onboard status LED's</p>
       </div>
-      
+
+      <!-- Differential -->
       <div class="pcb-viewer">
         <h2>Differential Drivetrain Breakout Board</h2>
-        <img id="viewer3" src="PCBanimation/Diff_Breakout_Board/board render0.webp" alt="PCB Viewer 3" width="100%">
+        <img id="viewer3" src="PCBanimation/Diff_Breakout_Board/board render0.webp" alt="Differential Viewer" width="100%">
         <button class="view-btn" onclick="resetViewer(2)">Reset View</button>
-        <button class="view-btn" id="toggle-rotate-2" onclick="toggleRotation(2)">Rotation: ON</button> 
+        <button class="view-btn" id="toggle-rotate-2" onclick="toggleRotation(2)">Rotation: ON</button>
         <button class="view-btn" onclick="showModal('modal-diff')">View Schematic</button>
         <button class="view-btn" onclick="showModal('modal-diff-pcb')">View PCB Layout</button>
         <h3>Features:</h3>
@@ -92,12 +62,13 @@
         <p>- Buck converter setup to step 9V down to 6V + 3.3V LDO regulator</p>
         <p>- Onboard status LED's</p>
       </div>
-      
+
+      <!-- Coil Driver -->
       <div class="pcb-viewer">
         <h2>Coil Driver Board</h2>
-        <img id="viewer4" src="PCBanimation/Coil_Driver_Board/board render0.webp" alt="PCB Viewer 4" width="100%">
+        <img id="viewer4" src="PCBanimation/Coil_Driver_Board/board render0.webp" alt="Coil Driver Viewer" width="100%">
         <button class="view-btn" onclick="resetViewer(3)">Reset View</button>
-        <button class="view-btn" id="toggle-rotate-3" onclick="toggleRotation(3)">Rotation: ON</button> 
+        <button class="view-btn" id="toggle-rotate-3" onclick="toggleRotation(3)">Rotation: ON</button>
         <button class="view-btn" onclick="showModal('modal-coil')">View Schematic</button>
         <button class="view-btn" onclick="showModal('modal-coil-pcb')">View PCB Layout</button>
         <h3>Features:</h3>
@@ -109,7 +80,6 @@
   </div>
 
   <!-- Modals -->
-  <!-- Repeat for each schematic and PCB layout -->
   <div id="modal-stm32" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="schematics/stm32_fc.kicad_sch"></kicanvas-source></kicanvas-embed></div></div>
   <div id="modal-stm32-pcb" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="layouts/stm32_fc.kicad_pcb"></kicanvas-source></kicanvas-embed></div></div>
 
@@ -121,150 +91,6 @@
 
   <div id="modal-coil" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="schematics/coil_driver.kicad_sch"></kicanvas-source></kicanvas-embed></div></div>
   <div id="modal-coil-pcb" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="layouts/coil_driver.kicad_pcb"></kicanvas-source></kicanvas-embed></div></div>
-
-<script>
-  const viewers = [];
-
-  function preloadFrames(pathPrefix, minFrame, maxFrame, delay = 10) {
-    let i = minFrame + 1;
-    function loadNext() {
-      if (i > maxFrame) return;
-      const image = new Image();
-      image.src = `${pathPrefix}${i}.webp`;
-      i++;
-      setTimeout(loadNext, delay);
-    }
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(loadNext);
-    } else {
-      setTimeout(loadNext, 500);
-    }
-  }
-
-  function createViewer(imgId, pathPrefix, minFrame, maxFrame, sensitivity = 5, viewerIndex) {
-    const img = document.getElementById(imgId);
-    const frameCount = maxFrame - minFrame + 1;
-    let currentFrame = 0;
-    let isDragging = false;
-    let startX = 0;
-    let passiveInterval = null;
-    let isRotationOn = true;
-
-    const updateFrame = (frameIndex) => {
-      img.src = `${pathPrefix}${frameIndex}.webp`;
-    };
-
-    const startPassiveRotation = () => {
-      if (passiveInterval) clearInterval(passiveInterval);
-      if (!isRotationOn) return;
-      passiveInterval = setInterval(() => {
-        currentFrame = (currentFrame + 1) % frameCount;
-        updateFrame(minFrame + currentFrame);
-      }, 40);
-    };
-
-    const stopPassiveRotation = () => {
-      clearInterval(passiveInterval);
-      passiveInterval = null;
-    };
-
-    const updateToggleLabel = () => {
-      const btn = document.getElementById(`toggle-rotate-${viewerIndex}`);
-      if (btn) btn.textContent = `Rotation: ${isRotationOn ? "ON" : "OFF"}`;
-    };
-
-    updateFrame(minFrame);
-    preloadFrames(pathPrefix, minFrame, maxFrame);
-    startPassiveRotation();
-
-    img.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      startX = e.clientX;
-      isRotationOn = false;
-      stopPassiveRotation();
-      updateToggleLabel();
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const deltaX = e.clientX - startX;
-      const deltaFrames = Math.floor(deltaX / sensitivity);
-      if (deltaFrames !== 0) {
-        currentFrame = (currentFrame + deltaFrames + frameCount) % frameCount;
-        updateFrame(minFrame + currentFrame);
-        startX = e.clientX;
-      }
-    });
-
-    window.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-      }
-    });
-
-    img.ondragstart = () => false;
-
-    return {
-      reset: () => {
-        currentFrame = 0;
-        updateFrame(minFrame);
-        isRotationOn = false;
-        stopPassiveRotation();
-        updateToggleLabel();
-      },
-      toggleRotation: () => {
-        isRotationOn = !isRotationOn;
-        updateToggleLabel();
-        if (isRotationOn) {
-          startPassiveRotation();
-        } else {
-          stopPassiveRotation();
-        }
-      }
-    };
-  }
-
-  viewers.push(createViewer("viewer1", "PCBanimation/STM32_FC_Board/board render", 0, 208, 5, 0));
-  viewers.push(createViewer("viewer2", "PCBanimation/ESP32_FC_Board/board render", 213, 465, 5, 1));
-  viewers.push(createViewer("viewer3", "PCBanimation/Diff_Breakout_Board_a/board render", 0, 237, 5, 2));
-  viewers.push(createViewer("viewer4", "PCBanimation/Coil_Driver_Board/board render", 0, 208, 5, 3));
-
-  function resetViewer(index) {
-    viewers[index]?.reset();
-  }
-
-  function toggleRotation(index) {
-    viewers[index]?.toggleRotation();
-  }
-
-  function showModal(id) {
-    const modal = document.getElementById(id);
-    modal.style.display = "flex";
-    function outsideClickHandler(e) {
-      if (e.target === modal) {
-        hideModal(id);
-        modal.removeEventListener('click', outsideClickHandler);
-      }
-    }
-    setTimeout(() => {
-      modal.addEventListener('click', outsideClickHandler);
-    }, 0);
-  }
-
-  function hideModal(id) {
-    document.getElementById(id).style.display = "none";
-  }
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') {
-      const openModal = document.querySelector('.modal[style*="display: flex"]');
-      if (openModal) {
-        openModal.style.display = 'none';
-      }
-    }
-  });
-</script>
-
 
 </body>
 </html>

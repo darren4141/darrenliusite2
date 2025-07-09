@@ -4,8 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Project 5</title>
-  <link rel="stylesheet" href="projectstylesheet.css"/>
-
+  <link rel="stylesheet" href="projectstylesheet.css" />
+  <link rel="stylesheet" href="pcbviewer.css" />
+  <script type="module" src="kicanvas.js"></script>
+  <script src="pcbviewer.js" defer></script>
   <style>
     #model-viewer {
       width: 100%;
@@ -20,17 +22,39 @@
     <a href="index.html" class="close-button">&times;</a>
     <div class="project-text">
       <h1>Differential Swerve Drivetrain</h1>
-      <p>After finishing all of the controls for the single swerve module, I decided to design a full swerve drivetrain with three modules.</p>
+      <p style="display: inline">After finishing all of the controls for the single swerve module, I decided to design a full swerve drivetrain with three modules.</p>
+      <p style="display: inline">So this project is basically </p>
+      <a href="project2.html" style="display: inline" target="_blank" rel="noopener noreferrer">my differential swerve module</a>
+      <p style="display: inline">x3!</p>
+      <br><br>
 
       <div id="model-viewer"></div>
 
       <h2>Breakout PCB</h2>
       <p>I designed a custom breakout PCB that features signal filtering and power management.</p>
-      <img src="project5/DiffboardPCB.png" width="45%">
-      <img src="project5/DiffBoardRender.png" width="45%">
+      <div class="pcb-viewer">
+        <img id="viewer3" src="PCBanimation/Diff_Breakout_Board_a/board render0.webp" alt="Differential Viewer" width="100%">
+        <button class="view-btn" onclick="resetViewer(0)">Reset View</button>
+        <button class="view-btn" id="toggle-rotate-0" onclick="toggleRotation(0)">Auto rotate</button>
+        <button class="view-btn" onclick="showModal('modal-diff')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-diff-pcb')">View PCB Layout</button>
+        <h3>Features:</h3>
+        <p>- Phase-enable drive for 6 motors using L293D H-Bridges and MOSFET inverters</p>
+        <p>- Buck converter setup to step 9V down to 6V + 3.3V LDO regulator</p>
+        <p>- Onboard status LED's</p>
+      </div>
+      <img src="project5/diffboardlayout.png" width="60%">
+
+
+
       <p>One of the biggest challenges with this project was GPIO pin allocation. In hindsight I should have used some kind of pin expander but for this project I barely got away with 24 GPIO pins. I ended up driving each motor with phase-enable control using an H-Bridge and MOSFET inverter in order to conserve 1 pin per motor.</p>
       <img src="project5/motorSchematic.png" width="60%">
+
     </div>
+
+      <div id="modal-diff" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="schematics/diff_breakout.kicad_sch"></kicanvas-source></kicanvas-embed></div></div>
+  <div id="modal-diff-pcb" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="layouts/diff_breakout.kicad_pcb"></kicanvas-source></kicanvas-embed></div></div>
+
   </div>
 
   <script type="module">
