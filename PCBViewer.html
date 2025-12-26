@@ -1,20 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My PCB Projects</title>
   <link rel="stylesheet" href="projectstylesheet.css" />
   <link rel="stylesheet" href="pcbviewer.css" />
   <script type="module" src="kicanvas.js"></script>
   <script src="pcbviewer.js" defer></script>
 </head>
+
 <body>
   <div class="project-content">
     <a href="index.html" class="close-button">&times;</a>
     <div class="project-text">
       <h1>My PCB's</h1>
       <h3>(click + drag to rotate)</h3>
+
+      <!-- RPI CM4 interface board -->
+      <div class="pcb-viewer">
+        <h2>RPI CM4 interface board</h2>
+        <img id="viewer5" src="PCBanimation/CM4_Interface_Board/board render0.webp" alt="CM4 Viewer" width="100%">
+        <button class="view-btn" onclick="resetViewer(4)">Reset View</button>
+        <button class="view-btn" id="toggle-rotate-0" onclick="toggleRotation(4)">Auto Rotate</button>
+        <button class="view-btn" onclick="showModal('modal-stm32')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-stm32-pcb')">View PCB Layout</button>
+        <h3>Features:</h3>
+        <p>- Power management: Two isolated buck regulators (MCU/peripherals), 3.3v LDO, USB-C Li-ion battery
+          recharging,
+          current sense and low battery detection, ESD and reverse polarity protection</p>
+        <p>- Shared I2C bus featuring an integrated IMU, current sense IC, heart rate/blood oxygen monitors</p>
+        <p>- Microphone and speaker I/O over I2S</p>
+        <p>- 22-pin interface camera support with impedance controlled differential pairs</p>
+      </div>
 
       <!-- STM32 -->
       <div class="pcb-viewer">
@@ -45,14 +64,16 @@
         <p>- USB-C programming made possible by CP2102N USB-UART bridge</p>
         <p>- MOSFET motor drivers</p>
         <p>- 3.3V LDO power regulator</p>
-        <p>- Automatic source switching for input from either 5V USB input or 3.7V battery input with anti-backfeeding</p>
+        <p>- Automatic source switching for input from either 5V USB input or 3.7V battery input with anti-backfeeding
+        </p>
         <p>- Onboard status LED's</p>
       </div>
 
       <!-- Differential -->
       <div class="pcb-viewer">
         <h2>Differential Drivetrain Breakout Board</h2>
-        <img id="viewer3" src="PCBanimation/Diff_Breakout_Board/board render0.webp" alt="Differential Viewer" width="100%">
+        <img id="viewer3" src="PCBanimation/Diff_Breakout_Board/board render0.webp" alt="Differential Viewer"
+          width="100%">
         <button class="view-btn" onclick="resetViewer(2)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-2" onclick="toggleRotation(2)">Auto Rotate</button>
         <button class="view-btn" onclick="showModal('modal-diff')">View Schematic</button>
@@ -80,17 +101,42 @@
   </div>
 
   <!-- Modals -->
-  <div id="modal-stm32" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="schematics/stm32_fc.kicad_sch"></kicanvas-source></kicanvas-embed></div></div>
-  <div id="modal-stm32-pcb" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="layouts/stm32_fc.kicad_pcb"></kicanvas-source></kicanvas-embed></div></div>
+  <div id="modal-stm32" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="schematics/stm32_fc.kicad_sch"></kicanvas-source></kicanvas-embed></div>
+  </div>
+  <div id="modal-stm32-pcb" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="layouts/stm32_fc.kicad_pcb"></kicanvas-source></kicanvas-embed></div>
+  </div>
 
-  <div id="modal-esp32" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="schematics/esp32_fc.kicad_sch"></kicanvas-source></kicanvas-embed></div></div>
-  <div id="modal-esp32-pcb" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="layouts/esp32_fc.kicad_pcb"></kicanvas-source></kicanvas-embed></div></div>
+  <div id="modal-esp32" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="schematics/esp32_fc.kicad_sch"></kicanvas-source></kicanvas-embed></div>
+  </div>
+  <div id="modal-esp32-pcb" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="layouts/esp32_fc.kicad_pcb"></kicanvas-source></kicanvas-embed></div>
+  </div>
 
-  <div id="modal-diff" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="schematics/diff_breakout.kicad_sch"></kicanvas-source></kicanvas-embed></div></div>
-  <div id="modal-diff-pcb" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="layouts/diff_breakout.kicad_pcb"></kicanvas-source></kicanvas-embed></div></div>
+  <div id="modal-diff" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="schematics/diff_breakout.kicad_sch"></kicanvas-source></kicanvas-embed></div>
+  </div>
+  <div id="modal-diff-pcb" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="layouts/diff_breakout.kicad_pcb"></kicanvas-source></kicanvas-embed></div>
+  </div>
 
-  <div id="modal-coil" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="schematics/coil_driver.kicad_sch"></kicanvas-source></kicanvas-embed></div></div>
-  <div id="modal-coil-pcb" class="modal"><div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source src="layouts/coil_driver.kicad_pcb"></kicanvas-source></kicanvas-embed></div></div>
+  <div id="modal-coil" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="schematics/coil_driver.kicad_sch"></kicanvas-source></kicanvas-embed></div>
+  </div>
+  <div id="modal-coil-pcb" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="layouts/coil_driver.kicad_pcb"></kicanvas-source></kicanvas-embed></div>
+  </div>
 
 </body>
+
 </html>

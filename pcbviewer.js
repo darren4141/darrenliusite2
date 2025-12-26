@@ -23,6 +23,12 @@ const viewerConfigs = [
         start: 0,
         end: 208,
     },
+    {
+        id: "viewer5",
+        path: "PCBanimation/CM4_Interface_Board/board render",
+        start: 0,
+        end: 255,
+    },
 ];
 
 const viewers = [];
@@ -106,7 +112,7 @@ function createViewer(imgId, pathPrefix, minFrame, maxFrame, sensitivity = 5) {
                 currentFrame = (currentFrame + direction + frameCount) % frameCount;
                 img.src = `${pathPrefix}${minFrame + currentFrame}.webp`;
                 stepsRemaining--;
-                setTimeout(animateReset, 5  ); // Adjust speed here
+                setTimeout(animateReset, 5); // Adjust speed here
             };
 
             animateReset();
