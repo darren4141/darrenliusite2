@@ -27,8 +27,8 @@
         </div>
         <button class="view-btn" onclick="resetViewer(4)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-4" onclick="toggleRotation(4)">Auto Rotate</button>
-        <button class="view-btn" onclick="showModal('modal-stm32')">View Schematic</button>
-        <button class="view-btn" onclick="showModal('modal-stm32-pcb')">View PCB Layout</button>
+        <button class="view-btn" onclick="showModal('modal-cm4-int-schem')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-cm4-int-pcb')">View PCB Layout</button>
         <h3>Features:</h3>
         <p>- Power management: Two isolated buck regulators (MCU/peripherals), 3.3v LDO, USB-C Li-ion battery
           recharging,
@@ -47,8 +47,8 @@
         </div>
         <button class="view-btn" onclick="resetViewer(5)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-5" onclick="toggleRotation(5)">Auto Rotate</button>
-        <button class="view-btn" onclick="showModal('modal-stm32')">View Schematic</button>
-        <button class="view-btn" onclick="showModal('modal-stm32-pcb')">View PCB Layout</button>
+        <button class="view-btn" onclick="showModal('modal-fc4-schem')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-fc4-pcb')">View PCB Layout</button>
 
         <h3>Features:</h3>
         <p>- Power management: 3.3V buck regulator, current sense, and reverse polarity protection</p>
@@ -66,8 +66,8 @@
         </div>
         <button class="view-btn" onclick="resetViewer(6)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-6" onclick="toggleRotation(6)">Auto Rotate</button>
-        <button class="view-btn" onclick="showModal('modal-stm32')">View Schematic</button>
-        <button class="view-btn" onclick="showModal('modal-stm32-pcb')">View PCB Layout</button>
+        <button class="view-btn" onclick="showModal('modal-mini-fc-schem')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-mini-fc-pcb')">View PCB Layout</button>
         <h3>Features:</h3>
         <p>- Power management: 3.3V buck regulator, current sense, and reverse polarity protection</p>
         <p>- Communication with BMI880 gyroscope + accelerometer over SPI</p>
@@ -81,8 +81,8 @@
         <img id="viewer1" src="PCBanimation/STM32_FC_Board/board render0.webp" alt="STM32 Viewer" width="100%">
         <button class="view-btn" onclick="resetViewer(0)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-0" onclick="toggleRotation(0)">Auto Rotate</button>
-        <button class="view-btn" onclick="showModal('modal-stm32')">View Schematic</button>
-        <button class="view-btn" onclick="showModal('modal-stm32-pcb')">View PCB Layout</button>
+        <button class="view-btn" onclick="showModal('modal-stm32-fc-schem')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-stm32-fc-pcb')">View PCB Layout</button>
         <h3>Features:</h3>
         <p>- SPI bus to interface with a BMI270 IMU and an NRF24L01 module</p>
         <p>- 14 pin SWD programming</p>
@@ -97,8 +97,8 @@
         <img id="viewer2" src="PCBanimation/ESP32_FC_Board/board render213.webp" alt="ESP32 Viewer" width="100%">
         <button class="view-btn" onclick="resetViewer(1)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-1" onclick="toggleRotation(1)">Auto Rotate</button>
-        <button class="view-btn" onclick="showModal('modal-esp32')">View Schematic</button>
-        <button class="view-btn" onclick="showModal('modal-esp32-pcb')">View PCB Layout</button>
+        <button class="view-btn" onclick="showModal('modal-esp32-fc-schem')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-esp32-fc-pcb')">View PCB Layout</button>
         <h3>Features:</h3>
         <p>- I2C to interface with MPU6050 IMU</p>
         <p>- USB-C programming made possible by CP2102N USB-UART bridge</p>
@@ -116,7 +116,7 @@
           width="100%">
         <button class="view-btn" onclick="resetViewer(2)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-2" onclick="toggleRotation(2)">Auto Rotate</button>
-        <button class="view-btn" onclick="showModal('modal-diff')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-diff-schem')">View Schematic</button>
         <button class="view-btn" onclick="showModal('modal-diff-pcb')">View PCB Layout</button>
         <h3>Features:</h3>
         <p>- Phase-enable drive for 6 motors using L293D H-Bridges and MOSFET inverters</p>
@@ -130,7 +130,7 @@
         <img id="viewer4" src="PCBanimation/Coil_Driver_Board/board render0.webp" alt="Coil Driver Viewer" width="100%">
         <button class="view-btn" onclick="resetViewer(3)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-3" onclick="toggleRotation(3)">Auto Rotate</button>
-        <button class="view-btn" onclick="showModal('modal-coil')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-coil-schem')">View Schematic</button>
         <button class="view-btn" onclick="showModal('modal-coil-pcb')">View PCB Layout</button>
         <h3>Features:</h3>
         <p>- IR sensor with adjustable sensitivity</p>
@@ -141,25 +141,53 @@
   </div>
 
   <!-- Modals -->
-  <div id="modal-stm32" class="modal">
+
+  <div id="modal-cm4-int-schem" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="schematics/PiComputeModuleBreakout.kicad_sch"></kicanvas-source></kicanvas-embed></div>
+  </div>
+  <div id="modal-cm4-int-pcb" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="layouts/PiComputeModuleBreakout.kicad_pcb"></kicanvas-source></kicanvas-embed></div>
+  </div>
+
+  <div id="modal-fc4-schem" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="schematics/Flight-Controller-4.kicad_sch"></kicanvas-source></kicanvas-embed></div>
+  </div>
+  <div id="modal-fc4-pcb" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="layouts/Flight-Controller-4.kicad_pcb"></kicanvas-source></kicanvas-embed></div>
+  </div>
+
+  <div id="modal-mini-fc-schem" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="schematics/Mini-Flight-Controller-Board-ESP32.kicad_sch"></kicanvas-source></kicanvas-embed></div>
+  </div>
+  <div id="modal-mini-fc-pcb" class="modal">
+    <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+          src="layouts/Mini-Flight-Controller-Board-ESP32.kicad_pcb"></kicanvas-source></kicanvas-embed></div>
+  </div>
+
+  <div id="modal-stm32-fc-schem" class="modal">
     <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
           src="schematics/stm32_fc.kicad_sch"></kicanvas-source></kicanvas-embed></div>
   </div>
-  <div id="modal-stm32-pcb" class="modal">
+  <div id="modal-stm32-fc-pcb" class="modal">
     <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
           src="layouts/stm32_fc.kicad_pcb"></kicanvas-source></kicanvas-embed></div>
   </div>
 
-  <div id="modal-esp32" class="modal">
+  <div id="modal-esp32-fc-schem" class="modal">
     <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
           src="schematics/esp32_fc.kicad_sch"></kicanvas-source></kicanvas-embed></div>
   </div>
-  <div id="modal-esp32-pcb" class="modal">
+  <div id="modal-esp32-fc-pcb" class="modal">
     <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
           src="layouts/esp32_fc.kicad_pcb"></kicanvas-source></kicanvas-embed></div>
   </div>
 
-  <div id="modal-diff" class="modal">
+  <div id="modal-diff-schem" class="modal">
     <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
           src="schematics/diff_breakout.kicad_sch"></kicanvas-source></kicanvas-embed></div>
   </div>
@@ -168,7 +196,7 @@
           src="layouts/diff_breakout.kicad_pcb"></kicanvas-source></kicanvas-embed></div>
   </div>
 
-  <div id="modal-coil" class="modal">
+  <div id="modal-coil-schem" class="modal">
     <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
           src="schematics/coil_driver.kicad_sch"></kicanvas-source></kicanvas-embed></div>
   </div>
