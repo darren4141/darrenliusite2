@@ -45,6 +45,24 @@ const viewerConfigs = [
 
 const viewers = [];
 
+const observer = new IntersectionObserver(
+    (entries) => {
+        for (const entry of entries) {
+            const idxStr = entry.target.dataset.viewerIndex;
+            if (idxStr == null) continue;
+
+            const index = parseInt(idxStr, 10);
+            const viewer = viewers[index];
+            if (!viewer) continue;
+
+            viewer.setVisible(entry.isIntersecting);
+        }
+    },
+    {
+        threshold: 0.25, // starts rotating when 25% of image is visible
+    }
+);
+
 function createViewer(imgId, pathPrefix, minFrame, maxFrame, sensitivity = 5) {
     const img = document.getElementById(imgId);
     if (!img) return; // Only set up if element exists
@@ -53,7 +71,9 @@ function createViewer(imgId, pathPrefix, minFrame, maxFrame, sensitivity = 5) {
     let currentFrame = 0;
     let isDragging = false;
     let startX = 0;
-    let autoRotate = true;
+
+    let autoEnabledByUser = true;  // default ON
+    let isVisible = false;
 
     function preloadFrames() {
         let i = minFrame + 1;
@@ -78,7 +98,7 @@ function createViewer(imgId, pathPrefix, minFrame, maxFrame, sensitivity = 5) {
     img.addEventListener("mousedown", (e) => {
         isDragging = true;
         startX = e.clientX;
-        autoRotate = false;
+        autoEnabledByUser = false;
         updateToggleButton(imgId, false);
     });
 
@@ -98,18 +118,25 @@ function createViewer(imgId, pathPrefix, minFrame, maxFrame, sensitivity = 5) {
 
     img.ondragstart = () => false;
 
-    // Auto-rotate loop
-    let interval = setInterval(() => {
-        if (autoRotate) updateFrame(1);
+    const interval = setInterval(() => {
+        if (autoEnabledByUser && isVisible) {
+            updateFrame(1);
+        }
     }, 40);
 
-    viewers.push({
+    const viewerIndex = viewers.length;
+
+    const viewerObj = {
         img,
         reset: () => {
-            autoRotate = false;
+            autoEnabledByUser = false;
+            updateToggleButton(imgId, false);
+
             const targetFrame = 0;
-            const forwardSteps = (frameCount + targetFrame - currentFrame) % frameCount;
-            const backwardSteps = (frameCount + currentFrame - targetFrame) % frameCount;
+            const forwardSteps =
+                (frameCount + targetFrame - currentFrame) % frameCount;
+            const backwardSteps =
+                (frameCount + currentFrame - targetFrame) % frameCount;
             const direction = forwardSteps <= backwardSteps ? 1 : -1;
             const steps = Math.min(forwardSteps, backwardSteps);
 
@@ -118,10 +145,10 @@ function createViewer(imgId, pathPrefix, minFrame, maxFrame, sensitivity = 5) {
                 if (stepsRemaining <= 0) {
                     currentFrame = targetFrame;
                     img.src = `${pathPrefix}${minFrame + currentFrame}.webp`;
-                    updateToggleButton(imgId, false);
                     return;
                 }
-                currentFrame = (currentFrame + direction + frameCount) % frameCount;
+                currentFrame =
+                    (currentFrame + direction + frameCount) % frameCount;
                 img.src = `${pathPrefix}${minFrame + currentFrame}.webp`;
                 stepsRemaining--;
                 setTimeout(animateReset, 5); // Adjust speed here
@@ -130,10 +157,22 @@ function createViewer(imgId, pathPrefix, minFrame, maxFrame, sensitivity = 5) {
             animateReset();
         },
         toggle: () => {
-            autoRotate = !autoRotate;
-            updateToggleButton(imgId, autoRotate);
+            autoEnabledByUser = !autoEnabledByUser;
+            updateToggleButton(imgId, autoEnabledByUser);
         },
-    });
+        setVisible: (visible) => {
+            isVisible = visible;
+        },
+        dispose: () => {
+            clearInterval(interval);
+            observer.unobserve(img);
+        },
+    };
+
+    viewers.push(viewerObj);
+
+    img.dataset.viewerIndex = String(viewerIndex);
+    observer.observe(img);
 }
 
 function updateToggleButton(imgId, isOn) {
@@ -152,7 +191,6 @@ function toggleRotation(index) {
     if (viewers[index]) viewers[index].toggle();
 }
 
-// Dynamically initialize only viewers that are on the page
 for (const config of viewerConfigs) {
     if (document.getElementById(config.id)) {
         createViewer(config.id, config.path, config.start, config.end);
