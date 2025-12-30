@@ -21,7 +21,10 @@
       <!-- RPI CM4 interface board -->
       <div class="pcb-viewer">
         <h2>RPI CM4 interface board</h2>
-        <img id="viewer5" src="PCBanimation/CM4_Interface_Board/board render0.webp" alt="CM4 Viewer" width="100%">
+        <div class="image-container">
+          <img id="viewer5" src="PCBanimation/CM4_Interface_Board/board render0.webp" alt="CM4 Viewer" width="80%"
+            display="block" margin-left="auto">
+        </div>
         <button class="view-btn" onclick="resetViewer(4)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-0" onclick="toggleRotation(4)">Auto Rotate</button>
         <button class="view-btn" onclick="showModal('modal-stm32')">View Schematic</button>
@@ -33,6 +36,43 @@
         <p>- Shared I2C bus featuring an integrated IMU, current sense IC, heart rate/blood oxygen monitors</p>
         <p>- Microphone and speaker I/O over I2S</p>
         <p>- 22-pin interface camera support with impedance controlled differential pairs</p>
+      </div>
+
+      <!-- Flight Controller Board V4 -->
+      <div class="pcb-viewer">
+        <h2>Flight Controller Board V4</h2>
+        <div class="image-container">
+          <img id="viewer6" src="PCBanimation/FC4_Board/board render0.webp" alt="FC4 Viewer" width="80%" display="block"
+            margin-left="auto">
+        </div>
+        <button class="view-btn" onclick="resetViewer(5)">Reset View</button>
+        <button class="view-btn" id="toggle-rotate-0" onclick="toggleRotation(5)">Auto Rotate</button>
+        <button class="view-btn" onclick="showModal('modal-stm32')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-stm32-pcb')">View PCB Layout</button>
+
+        <h3>Features:</h3>
+        <p>- Power management: 3.3V buck regulator, current sense, and reverse polarity protection</p>
+        <p>- Communication with BMI880 gyroscope + accelerometer over SPI</p>
+        <p>- USB-C auto programming via USB-UART bridge</p>
+        <p>- Four MOSFET powered motor drivers</p>
+      </div>
+
+      <!-- Flight Controller Board V4 -->
+      <div class="pcb-viewer">
+        <h2>Mini Flight Controller Board V4</h2>
+        <div class="image-container">
+          <img id="viewer7" src="PCBanimation/Mini_FC_Board/board render0.webp" alt="FC4 Viewer" width="50%"
+            display="block" margin-left="auto">
+        </div>
+        <button class="view-btn" onclick="resetViewer(6)">Reset View</button>
+        <button class="view-btn" id="toggle-rotate-0" onclick="toggleRotation(6)">Auto Rotate</button>
+        <button class="view-btn" onclick="showModal('modal-stm32')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-stm32-pcb')">View PCB Layout</button>
+        <h3>Features:</h3>
+        <p>- Power management: 3.3V buck regulator, current sense, and reverse polarity protection</p>
+        <p>- Communication with BMI880 gyroscope + accelerometer over SPI</p>
+        <p>- USB-C auto programming via USB-UART bridge</p>
+        <p>- Four MOSFET powered motor drivers</p>
       </div>
 
       <!-- STM32 -->

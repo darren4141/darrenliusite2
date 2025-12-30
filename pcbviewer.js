@@ -29,6 +29,18 @@ const viewerConfigs = [
         start: 0,
         end: 255,
     },
+    {
+        id: "viewer6",
+        path: "PCBanimation/FC4_Board/board render",
+        start: 1,
+        end: 255,
+    },
+    {
+        id: "viewer7",
+        path: "PCBanimation/Mini_FC_Board/board render",
+        start: 1,
+        end: 255,
+    }
 ];
 
 const viewers = [];
