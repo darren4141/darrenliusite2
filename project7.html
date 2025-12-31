@@ -6,6 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Project 7</title>
   <link rel="stylesheet" href="projectstylesheet.css">
+  <link rel="stylesheet" href="pcbviewer.css" />
+  <script type="module" src="kicanvas.js"></script>
+  <script src="pcbviewer.js" defer></script>
+  <style>
+    #model-viewer {
+      width: 80%;
+      height: 500px;
+      margin: 0 auto;
+      display: block;
+      border: 1px solid #ccc;
+    }
+  </style>
 </head>
 
 <body>
@@ -49,8 +61,109 @@
       </p>
       <h3>Flight control algorithm:</h3>
       <img src="project7/flightcontrolflowchart.png" alt="flight controller flowchart" width="100%">
+
+      <h2>New flight controller design:</h2>
+      <p>After working with the mini flight controller for a while, I decided I needed to upgrade the board, notably
+        switching from the 3.3V LDO to a step down converter for better efficiency, and switching away from the mini
+        ESP32 to an integrated ESP32 module on the board with integrated USB-C programming. Additionally I switched to
+        the more reliable BMI880 IMU.</p>
+      <!-- Flight Controller Board V4 -->
+      <div class="pcb-viewer">
+        <h2>Flight Controller Board V4</h2>
+        <div class="image-container">
+          <img id="viewer6" src="PCBanimation/FC4_Board/board render1.webp" alt="FC4 Viewer" width="80%" display="block"
+            margin-left="auto">
+        </div>
+        <button class="view-btn" onclick="resetViewer(0)">Reset View</button>
+        <button class="view-btn" id="toggle-rotate-5" onclick="toggleRotation(0)">Auto Rotate</button>
+        <button class="view-btn" onclick="showModal('modal-fc4-schem')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-fc4-pcb')">View PCB Layout</button>
+
+        <h3>Features:</h3>
+        <p>- Power management: 3.3V buck regulator, current sense, and reverse polarity protection</p>
+        <p>- Communication with BMI880 gyroscope + accelerometer over SPI</p>
+        <p>- USB-C auto programming via USB-UART bridge</p>
+        <p>- Four MOSFET powered motor drivers</p>
+      </div>
+
+      <h2>CAD model:</h2>
+      <h3>Click + drag to rotate</h3>
+      <div id="model-viewer" width="100%"></div>
+
     </div>
+
+    <div id="modal-fc4-schem" class="modal">
+      <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+            src="schematics/Flight-Controller-4.kicad_sch"></kicanvas-source></kicanvas-embed></div>
+    </div>
+    <div id="modal-fc4-pcb" class="modal">
+      <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+            src="layouts/Flight-Controller-4.kicad_pcb"></kicanvas-source></kicanvas-embed></div>
+    </div>
+
   </div>
+  <script type="module">
+    console.log("Viewer script loaded");
+    import * as THREE from './libs/three.module.js';
+    import { GLTFLoader } from './libs/GLTFLoader.js';
+    import { OrbitControls } from './libs/OrbitControls.js';
+
+
+    const container = document.getElementById('model-viewer');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf0f0f0);
+
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+    camera.position.set(2, 2, 5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+    scene.add(light);
+
+    const loader = new GLTFLoader();
+    loader.load('project7/DroneAssembly.glb', (gltf) => {
+      const model = gltf.scene;
+      scene.add(model);
+
+      // Compute bounding box of the model
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3()).length();
+      const center = box.getCenter(new THREE.Vector3());
+
+      // Reposition the camera to fit the object
+      camera.position.copy(center.clone().add(new THREE.Vector3(size / 1.6, size / 1.6, size / 1.6)));
+      camera.lookAt(center);
+
+      // Optionally reposition the controls target
+      controls.target.copy(center);
+      controls.update();
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    });
+  </script>
+
 </body>
 
 </html>
