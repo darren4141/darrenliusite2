@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project 6</title>
     <link rel="stylesheet" href="projectstylesheet.css">
 </head>
+
 <body>
     <div class="project-content">
         <a href="index.html" class="close-button">&times;</a>
@@ -13,33 +15,60 @@
         <div class="project-text">
             <h1>Custom Mini Drone</h1>
             <h2 class="subtitle">2025 | In Progress</h2>
-            <p>For this project I attempted to make a mini drone fully from scratch, including the CAD, electrical layout, and controls. This project gave me valuable experience with integrating electrical, mechanical, and software systems.</p>
-            <h2>CAD Design:</h2>
-            <img src="project6/cover.png" width="100%">
-            <p>For the CAD design, I tried to make something easily 3D-printable and repairable, while also being lightweight with propeller guards for safety purposes.</p>
-            <img src="project6/propellerAdapter.png" width="45%">
-            <img src="project6/DroneTop.png" width="45%">
+            <p>For this project I attempted to make a mini drone fully from scratch, including the CAD, electrical
+                layout, and controls. This project gave me valuable experience with integrating electrical, mechanical,
+                and software systems.</p>
 
             <h2>Perf board prototype</h2>
-            <p>I soldered a prototype flight controller board for initial testing. The board was ESP32 based and communicated with an MPU6050 accelerometer using I2C. The motors are driven with MOSFETs</p>
+            <p>I soldered a prototype flight controller board for initial testing. The board was ESP32 based and
+                communicated with an MPU6050 accelerometer using I2C. The motors are driven with MOSFETs</p>
             <img src="project6/DroneBoardBack.png" width="45%">
             <img src="project6/DroneBoardFront.png" width="45%">
 
             <h2>Controls setup</h2>
-            <p>I used the built in DLPF on the IMU to get clean data readings and sent them to an ESP32 webserver to visualize the pitch and roll in 3D</p>
+            <p>I used the built in DLPF on the IMU to get clean data readings and sent them to an ESP32 webserver to
+                visualize the pitch and roll in 3D</p>
             <img src="project6/GyroSetup.png" width="35%">
             <img src="project6/GyroInterface.png" width="60%">
-            <p>This controls page featured a re-zeroing function that averages the past 10 IMU readings to zero, PWM motor control, and IMU data logging.</p>
+            <p>This controls page featured a re-zeroing function that averages the past 10 IMU readings to zero, PWM
+                motor control, and IMU data logging.</p>
+
+            <h2>CAD Design:</h2>
+            <img src="project6/cover.png" width="100%">
+            <p>For the CAD design, I tried to make something easily 3D-printable and repairable, while also being
+                lightweight with propeller guards for safety purposes.</p>
+            <img src="project6/propellerAdapter.png" width="45%">
+            <img src="project6/DroneTop.png" width="45%">
 
             <h2>Custom flight controller PCB</h2>
             <img src="project6/DroneBoardPCB.png" width="45%">
             <img src="project6/DroneBoardRender.png" width="45%">
-            <p>After verifying that the perf board and schematic worked, I designed a more compact flight controller PCB. It's STM-32 based and uses a shared SPI bus to communicate with a BMI270 IMU and an NRF24L01 radio module. Additionally it features bidirectional DRV motor drivers and onboard status LED's</p>
-            
-            <p>Additionally I designed a simple driver board for the BMI270 IMU so I could easily test it and write firmware quicker.</p>
-            <img src="project6/BMIboardPCB.png" width="45%">
-            <img src="project6/BMIboardrender.png" width="45%">
+            <p>After verifying that the perf board and schematic worked, I designed a more compact flight controller
+                PCB. It's STM-32 based and uses a shared SPI bus to communicate with a BMI270 IMU and an NRF24L01 radio
+                module. Additionally it features bidirectional DRV motor drivers and onboard status LED's</p>
+
+            <p>Additionally I designed a simple driver board for the BMI270 IMU so I could easily test it and write
+                firmware quicker.</p>
+            <img src="project6/BMIboardPCB.png" width="30%">
+            <img src="project6/BMIboardrender.png" width="28.5%">
+
+            <h2>Quadcopter V2:</h2>
+            <p>After some unsuccessful flight tests, I realized I would have to make some modifications to be able to
+                achieve flight.</p>
+
+            <p>I started by designing a lower profile flight controller PCB which used the smaller ESP32-XIAO C6
+                microcontroller.</p>
+            <img src="project6/mini_pcb_render.jpg" alt="board render" , width="31%">
+            <img src="project6/mini_fc_pcb_front.jpg" alt="mini-pcb-front" , width="30%">
+            <img src="project6/mini_fc_pcb.jpg" alt="mini-pcb-back" , width="33%">
+
+            <h2>Initial thrust:</h2>
+            <p>The pcb allowed for a much smaller and more symmetrical footprint. Additionally, I switched to smaller
+                propellers.</p>
+            <img src="project6/dronev2.jpg" alt="dronev2" , width="38%">
+            <img src="project6/flight.gif" alt="flight-gif" , width="55%">
         </div>
     </div>
 </body>
+
 </html>
