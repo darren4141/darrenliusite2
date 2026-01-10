@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project 7</title>
+  <link rel="stylesheet" href="projectstylesheet.css">
+  <link rel="stylesheet" href="pcbviewer.css" />
+  <script type="module" src="kicanvas.js"></script>
+  <script src="pcbviewer.js" defer></script>
+
+  <style>
+    #model-viewer {
+      width: 80%;
+      height: 500px;
+      margin: 0 auto;
+      display: block;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="project-content">
+    <a href="index.html" class="close-button">&times;</a>
+    <div class="project-text">
+      <h1>TED Hardware + Firmware Interface</h1>
+      <h2 class="subtitle">2025 | In Progress</h2>
+      <p>TED is a social robotics product under development that aims to care for its user through AI driven audio +
+        video processing and features hardware peripherals such as motors and heart rate monitoring sensors.</p>
+      <p>I am designing and implementing the hardware and firmware stack for this project which is as follows:</p>
+
+      <img src="project8/hw_sw_stack.png" alt="hw_sw_stack" , width="80%">
+
+      <h2>Hardware</h2>
+      <img src="project8/board_front.jpg" alt="board_front" , width="32%" , display="inline">
+      <img src="project8/board_back.jpg" alt="board_back" , width="33%" , display="inline">
+      <img src="project8/board_back_w_module.jpg" alt="board_back_w_module" , width="34%" , display="inline">
+      <p>The project utilizes the Raspberry Pi Compute Module, which is a version of the RPi 4 with an emphasis on small
+        form factor for custom use in embedded projects. My interface board for the CM4 allows for the usage of various
+        hardware peripherals, and also manages power.</p>
+      <!-- RPI CM4 interface board -->
+      <div class="pcb-viewer">
+        <h2>RPI CM4 interface board</h2>
+        <div class="image-container">
+          <img id="viewer5" src="PCBanimation/CM4_Interface_Board/board render0.webp" alt="CM4 Viewer" width="80%"
+            display="block" margin-left="auto">
+        </div>
+        <button class="view-btn" onclick="resetViewer(0)">Reset View</button>
+        <button class="view-btn" id="toggle-rotate-5" onclick="toggleRotation(0)">Auto Rotate</button>
+        <button class="view-btn" onclick="showModal('modal-cm4-int-schem')">View Schematic</button>
+        <button class="view-btn" onclick="showModal('modal-cm4-int-pcb')">View PCB Layout</button>
+
+        <h3>Features:</h3>
+        <p>- Power management: Two isolated buck regulators (for MCU/peripherals), 3.3V LDO, USB-C Li-ion battery
+          recharging, current sense and low battery detection, ESD and reverse polarity protection</p>
+        <p>- Shared I2C bus featuring an integrated IMU, current sense IC, heart rate/blood oxygen monitors</p>
+        <p>- Microphone and speaker I/O over I2S</p>
+        <p>- 22-pin interface camera support with impedance controlled differential pairs</p>
+      </div>
+
+
+    </div>
+
+    <div id="modal-cm4-int-schem" class="modal">
+      <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+            src="schematics/PiComputeModuleBreakout.kicad_sch"></kicanvas-source></kicanvas-embed></div>
+    </div>
+    <div id="modal-cm4-int-pcb" class="modal">
+      <div class="modal-content"><kicanvas-embed controls="full" theme="kicad"><kicanvas-source
+            src="layouts/PiComputeModuleBreakout.kicad_pcb"></kicanvas-source></kicanvas-embed></div>
+    </div>
+
+  </div>
+</body>
+
+</html>
