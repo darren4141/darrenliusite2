@@ -60,7 +60,21 @@
         <p>- 22-pin interface camera support with impedance controlled differential pairs</p>
       </div>
 
+      <h3>Heartbeat sensor signal processing</h3>
+      <p>One of the more involved aspects of this project was extracting heartbeat data from raw MAX30102 sensor
+        readings.</p>
 
+      <img src="project8/raw_readings_vs_time.png" alt="raw_readings_vs_time" , width="75%">
+
+      <p>The raw readings had to go through numerous signal processing steps in order to extract proper
+        heartbeat data. The steps are as follows:</p>
+
+      <h4>Step 1: Remove DC component of data with an exponential moving average (EMA)</h4>
+      <img src="project8/AC_readings_vs_time.png" alt="AC_readings_vs_time" , width="75%">
+      <h4>Step 2: Filter out unwanted frequencies using a band-pass filter (BPF)</h4>
+      <img src="project8/BPF_readings_vs_time.png" alt="BPF_readings_vs_time" , width="75%">
+      <h4>Step 3: Smooth out function, generate a threshold function, detect local maximums</h4>
+      <img src="project8/heartbeats_vs_time.png" alt="heartbeats_vs_time" , width="75%">
     </div>
 
     <div id="modal-cm4-int-schem" class="modal">
