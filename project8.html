@@ -60,20 +60,36 @@
         <p>- 22-pin interface camera support with impedance controlled differential pairs</p>
       </div>
 
-      <h3>Heartbeat sensor signal processing</h3>
-      <p>One of the more involved aspects of this project was extracting heartbeat data from raw MAX30102 sensor
+      <h3>Heartbeat sensor integration</h3>
+      <p>The heartbeat sensor subsystem features numerous threads that allow for continuous reading and processing of
+        raw data. The multithreaded signal processing sequence is described below:</p>
+      <img src="project8/irled_threads_diagram.png" alt="irled_threads_diagram" , width="80%">
+      <p>One of the more involved aspects of this process was extracting heartbeat signal from raw MAX30102 sensor
         readings.</p>
 
       <img src="project8/raw_readings_vs_time.png" alt="raw_readings_vs_time" , width="75%">
 
-      <p>The raw readings had to go through numerous signal processing steps in order to extract proper
+      <p>As you can see, the raw readings have lots of noise and have to go through numerous signal processing steps in
+        order to extract proper
         heartbeat data. The steps are as follows:</p>
 
       <h4>Step 1: Remove DC component of data with an exponential moving average (EMA)</h4>
+      <p>Raw readings have a DC component caused my factors such as finger pressure, ambient light, and finger
+        placement, and an AC component which captures the actual heartbeat. This DC component is isolated using an
+        expected moving average formula, and is subtracted from the original signal, leaving the desired AC component of
+        the signal.
+      </p>
+      <img src="project8/raw_readings_and_DC.png" alt="raw_readings_and_DC" , width="75%">
       <img src="project8/AC_readings_vs_time.png" alt="AC_readings_vs_time" , width="75%">
       <h4>Step 2: Filter out unwanted frequencies using a band-pass filter (BPF)</h4>
+      <p>Next, unwanted frequencies, mainly high frequency spikes are filtered out using a band pass filter. I chose an
+        alpha value (0.04 * 100 samples per second = 0.25s = 250BPM) to ensure I was only filtering out frequencies
+        well outside the range of typical heart rates.</p>
       <img src="project8/BPF_readings_vs_time.png" alt="BPF_readings_vs_time" , width="75%">
       <h4>Step 3: Smooth out function, generate a threshold function, detect local maximums</h4>
+      <p>After applying some additional smoothing to the filtered function, I detect heartbeats by generating a second
+        "threshold" function, which is a more dramatically smoothed version of the function. If a given point is a local
+        maximum and is over the threshold, it is deemed a heartbeat.</p>
       <img src="project8/heartbeats_vs_time.png" alt="heartbeats_vs_time" , width="75%">
     </div>
 
