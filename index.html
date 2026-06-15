@@ -6,37 +6,55 @@
   <link rel="icon" href="gears.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Darren Liu Selected Projects</title>
+  <title>Darren Liu</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
-  <div class="icon-bar">
-    <a href="https://github.com/darren4141" target="_blank">
-      <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" class="icon" />
-    </a>
-    <a href="https://www.linkedin.com/in/darren-liu-414a14i/" target="_blank">
-      <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn" class="icon" />
-    </a>
-    <a href="Resume_2A.pdf" target="_blank">
-      <img src="https://cdn-icons-png.flaticon.com/512/136/136522.png" alt="Resume" class="icon" />
-    </a>
-  </div>
-
-  <h1 class="page-title">Darren Liu - Selected Projects</h1>
-  <p class="page-subtitle">
-    Hi, I'm Darren! I'm an undergraduate electrical engineering student. I'm interested in hardware, firmware, controls,
-    and embedded systems development. Check out some of my past projects below:
-  </p>
+  <nav class="site-nav">
+    <span class="site-nav__name">Darren Liu</span>
+    <div class="site-nav__links">
+      <a href="https://github.com/darren4141" target="_blank">
+        <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" class="icon" />
+      </a>
+      <a href="https://www.linkedin.com/in/darren-liu-414a14i/" target="_blank">
+        <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn" class="icon" />
+      </a>
+      <a href="Resume_2A.pdf" target="_blank">
+        <img src="https://cdn-icons-png.flaticon.com/512/136/136522.png" alt="Resume" class="icon" />
+      </a>
+    </div>
+  </nav>
 
   <div class="project-grid">
+
     <div class="project-card">
-      <h3>PCB Projects</h3>
+      <a href="project10.html" class="project-thumb">
+        <img src="project10/cover.png" alt="RTOS" />
+        <div class="project-overlay">
+          <h2>Bare-Metal RTOS for Raspberry Pi CM4</h2>
+          <p>Preemptive scheduler, IRQ context switching, and UART bootloader in C and ARM assembly</p>
+          <hr />
+          <span class="learn-more">Click to learn more</span>
+        </div>
+      </a>
+    </div>
+
+    <div class="project-card">
+      <a href="project9.html" class="project-thumb">
+        <img src="project9/cover.png" alt="RISC-V CPU" />
+        <div class="project-overlay">
+          <h2>5-Stage Pipelined RISC-V CPU</h2>
+          <p>Full RV32I pipeline with forwarding, stalling, and branch flushing in Verilog</p>
+          <hr />
+          <span class="learn-more">Click to learn more</span>
+        </div>
+      </a>
+    </div>
+
+    <div class="project-card">
       <a href="PCBViewer.html" class="project-thumb">
         <img src="PCBanimation/FC4_Board/board render1.webp" alt="PCB Project" />
         <div class="project-overlay">
@@ -48,7 +66,6 @@
     </div>
 
     <div class="project-card">
-      <h3>TED Interface for Raspberry Pi 4</h3>
       <a href="project8.html" class="project-thumb">
         <img src="project8/cover.webp" alt="CM4 Board" />
         <div class="project-overlay">
@@ -61,7 +78,6 @@
     </div>
 
     <div class="project-card">
-      <h3>Mini Drone V2</h3>
       <a href="project7.html" class="project-thumb">
         <img src="project7/cover.png" alt="Drone V2" />
         <div class="project-overlay">
@@ -74,7 +90,6 @@
     </div>
 
     <div class="project-card">
-      <h3>Differential Swerve Drivetrain</h3>
       <a href="project5.html" class="project-thumb">
         <img src="project5/cover.png" alt="Swerve Drivetrain" />
         <div class="project-overlay">
@@ -87,7 +102,6 @@
     </div>
 
     <div class="project-card">
-      <h3>Custom Mini Drone</h3>
       <a href="project6.html" class="project-thumb">
         <img src="project6/cover.png" alt="Mini Drone" />
         <div class="project-overlay">
@@ -100,7 +114,6 @@
     </div>
 
     <div class="project-card">
-      <h3>FIRST Robotics Competition 2024</h3>
       <a href="project1.html" class="project-thumb">
         <img src="project1/cover.png" alt="FRC 2024" />
         <div class="project-overlay">
@@ -113,7 +126,6 @@
     </div>
 
     <div class="project-card">
-      <h3>Differential Swerve Drive Module</h3>
       <a href="project2.html" class="project-thumb">
         <img src="project2/cover.png" alt="Drive Module" />
         <div class="project-overlay">
@@ -126,7 +138,6 @@
     </div>
 
     <div class="project-card">
-      <h3>FIRST Robotics Competition 2023</h3>
       <a href="project3.html" class="project-thumb">
         <img src="project3/IMG_2233-removebg-preview.png" alt="FRC 2023" />
         <div class="project-overlay">
@@ -139,7 +150,6 @@
     </div>
 
     <div class="project-card">
-      <h3>Smart Trash Bin</h3>
       <a href="project4.html" class="project-thumb">
         <img src="project4/cover.png" alt="Smart Bin" />
         <div class="project-overlay">
@@ -150,7 +160,9 @@
         </div>
       </a>
     </div>
+
   </div>
+
 </body>
 
 </html>

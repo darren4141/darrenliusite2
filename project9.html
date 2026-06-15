@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5-Stage Pipelined RISC-V CPU</title>
+    <link rel="stylesheet" href="projectstylesheet.css">
+    <style>
+        pre {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px;
+            font-size: 14px;
+            overflow-x: auto;
+            text-align: left;
+            line-height: 1.6;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+            text-align: left;
+            margin: 16px 0;
+        }
+        th {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            padding: 10px 12px;
+            font-weight: 600;
+        }
+        td {
+            border: 1px solid var(--color-border);
+            padding: 10px 12px;
+        }
+        tr:nth-child(even) td {
+            background-color: var(--color-surface);
+        }
+    </style>
+</head>
+<body>
+    <div class="project-content">
+        <a href="index.html" class="close-button">&times;</a>
+        <div class="project-text">
+            <h1>5-Stage Pipelined RISC-V CPU in Verilog</h1>
+            <h2 class="subtitle">2026</h2>
+            <p>I designed and implemented a complete 5-stage pipelined CPU in Verilog that executes the RISC-V RV32I instruction set. The project covers the full design from individual logic components up to a working processor, including all the hazard mitigation techniques a real pipeline requires: data forwarding, load-use stalling, and control flow flushing. I also built a single-cycle reference implementation for comparison, a comprehensive test suite, and a Python-based build system.</p>
+            <p>The complete source is available on <a href="https://github.com/darren4141/learn_verilog" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
+
+            <h2>Why pipelining?</h2>
+            <p>A single-cycle CPU completes one instruction per clock cycle but must run the clock slowly enough for the slowest instruction to finish. Pipelining overlaps the execution of multiple instructions: while one instruction is in the execute stage, the next is being decoded, and the one after that is being fetched. This allows the clock to run much faster, improving throughput significantly.</p>
+            <p>The pipeline I implemented has five stages: Instruction Fetch (IF), Instruction Decode (ID), Execute (EX), Memory (M), and Write Back (WB). Each stage operates on a different instruction every cycle, with intermediate pipeline registers holding state between stages.</p>
+
+            <pre>
+Cycle:      1    2    3    4    5    6    7
+Instr 1:    IF   ID   EX   M    WB
+Instr 2:         IF   ID   EX   M    WB
+Instr 3:              IF   ID   EX   M    WB
+Instr 4:                   IF   ID   EX   M    WB</pre>
+
+            <h2>Architecture Overview</h2>
+            <p>The CPU uses a Harvard-style architecture with separate instruction memory and data memory, which allows an instruction fetch and a data load/store to happen in the same cycle. The design is broken into 25 individual Verilog modules that each handle a specific task:</p>
+            <ul>
+                <li><strong>ALU</strong> — 32 arithmetic and logic operations (add, sub, AND, OR, XOR, shifts, set-less-than)</li>
+                <li><strong>Control unit</strong> — decodes each instruction and produces 18-bit control signals</li>
+                <li><strong>Immediate generator</strong> — extracts and sign-extends I, S, B, U, and J format immediates</li>
+                <li><strong>Register file</strong> — 32 × 32-bit registers with two read ports and one write port</li>
+                <li><strong>Instruction memory / Data memory</strong> — separate memories; dmem supports byte, half-word, and word accesses</li>
+                <li><strong>Pipeline registers</strong> (IF/ID, ID/EX, EX/M, M/WB) — hold state across stage boundaries</li>
+                <li><strong>Hazard mitigation units</strong> — forwarding, stalling, and flushing (described below)</li>
+            </ul>
+
+            <h2>The Hazard Problem</h2>
+            <p>Pipelining introduces hazards: situations where the correct result of one instruction is not yet available when a later instruction needs it. Without mitigation, a pipeline would produce silently wrong results. There are three classes of hazard I had to solve:</p>
+
+            <h2>1. Data Hazards — Forwarding</h2>
+            <p>When instruction A produces a value and instruction B immediately uses it, B reaches the Execute stage before A's result has been written back to the register file. The solution is data forwarding (also called operand bypassing): route the result directly from wherever it currently sits in the pipeline to the point where it is needed, bypassing the register file entirely.</p>
+            <p>I implemented three forwarding paths:</p>
+            <table>
+                <tr>
+                    <th>Path</th>
+                    <th>Source → Destination</th>
+                    <th>Latency</th>
+                </tr>
+                <tr>
+                    <td>MX Forward</td>
+                    <td>M stage result → EX stage ALU input</td>
+                    <td>0 cycles</td>
+                </tr>
+                <tr>
+                    <td>WX Forward</td>
+                    <td>WB stage result → EX stage ALU input</td>
+                    <td>0 cycles</td>
+                </tr>
+                <tr>
+                    <td>WM Forward</td>
+                    <td>WB stage result → M stage store data</td>
+                    <td>0 cycles</td>
+                </tr>
+            </table>
+            <p>The forwarding unit compares the destination register of instructions in the M and WB stages against the source registers of the instruction currently in EX. When a match is found, multiplexers in the EX stage select the forwarded value instead of the stale register file output. MX forwarding is checked first; if both M and WB are writing to the same destination, M takes priority.</p>
+            <p>With forwarding, a sequence of back-to-back ALU instructions executes with zero stall cycles:</p>
+            <pre>
+add x1, x0, x0    # result available in M by cycle 4
+add x2, x1, x0    # x1 forwarded from M  → no stall
+add x3, x2, x0    # x2 forwarded from WB → no stall</pre>
+
+            <h2>2. Load-Use Hazards — Stalling</h2>
+            <p>Forwarding cannot handle every case. A load instruction (lw, lh, lb) retrieves its result from data memory at the end of the M stage. If the very next instruction needs that value, it will be in the EX stage while the load is still in M — one cycle too early for MX forwarding to work.</p>
+            <p>The stalling unit detects this condition and inserts a one-cycle bubble: the PC and IF/ID register are frozen for one cycle, and a NOP is injected into the ID/EX register. After the stall, the load result is in the M stage and MX forwarding takes over.</p>
+            <pre>
+Cycle:    1     2     3       4          5
+lw x1:   IF    ID    EX   →  M (stall)  WB
+add x3:        IF    ID   →  ID (stall) EX ← x1 forwarded from M</pre>
+
+            <h2>3. Control Hazards — Flushing</h2>
+            <p>Branch and jump decisions are resolved in the EX stage (cycle 3 of an instruction). By that point, two instructions have already been fetched and partially executed down the wrong path. When a branch is taken, those instructions must be invalidated.</p>
+            <p>The flush unit monitors the EX stage and, when a branch is taken or an unconditional jump is executed, replaces the IF/ID register contents with a NOP and redirects the PC to the branch target. This costs one incorrectly-fetched instruction per taken branch.</p>
+            <p>I handled JAL specially: since JAL's target is PC-relative and fully computable at fetch time, I resolve it in the IF stage with zero penalty. JALR requires reading a register, so it resolves in ID with a one-cycle penalty.</p>
+
+            <table>
+                <tr>
+                    <th>Hazard</th>
+                    <th>Mitigation</th>
+                    <th>Penalty</th>
+                </tr>
+                <tr>
+                    <td>ALU-to-ALU dependency</td>
+                    <td>MX or WX forwarding</td>
+                    <td>0 cycles</td>
+                </tr>
+                <tr>
+                    <td>Load followed by use</td>
+                    <td>1-cycle stall + MX forward</td>
+                    <td>+1 cycle</td>
+                </tr>
+                <tr>
+                    <td>Branch not taken</td>
+                    <td>Static not-taken prediction</td>
+                    <td>0 cycles</td>
+                </tr>
+                <tr>
+                    <td>Branch taken</td>
+                    <td>Flush IF/ID, redirect PC</td>
+                    <td>+2 cycles</td>
+                </tr>
+                <tr>
+                    <td>JAL (unconditional jump)</td>
+                    <td>Resolved in IF stage</td>
+                    <td>0 cycles</td>
+                </tr>
+                <tr>
+                    <td>JALR (register-indirect jump)</td>
+                    <td>Resolved in ID stage</td>
+                    <td>+1 cycle</td>
+                </tr>
+            </table>
+
+            <h2>Instruction Set Coverage</h2>
+            <p>The CPU implements the RISC-V RV32I base integer instruction set. I tested 37 out of the approximately 40 core instructions, covering all six instruction encoding formats:</p>
+            <ul>
+                <li><strong>R-type</strong> — add, sub, and, or, xor, sll, srl, sra, slt, sltu</li>
+                <li><strong>I-type</strong> — addi, andi, ori, xori, slli, srli, slti, lw, lh, lb, jalr</li>
+                <li><strong>S-type</strong> — sw, sh, sb</li>
+                <li><strong>B-type</strong> — beq, bne, blt, bge, bltu, bgeu</li>
+                <li><strong>U-type</strong> — lui, auipc</li>
+                <li><strong>J-type</strong> — jal</li>
+            </ul>
+
+            <h2>Testing Methodology</h2>
+            <p>I wrote 42 testbenches in total: 19 unit tests targeting individual components and 23 integration tests that run real RISC-V assembly programs through the full CPU pipeline.</p>
+            <p>Each integration test assembles a program using the RISC-V GNU toolchain, converts it to a Verilog hex file, and loads it into the simulated instruction memory. After execution, the testbench reads the register file and data memory and compares them against expected values. Tests also generate VCD waveform files for analysis in GTKWave when I needed to step through a hazard scenario signal by signal.</p>
+            <p>The test suite includes dedicated hazard tests designed to exercise each mitigation path in isolation:</p>
+            <ul>
+                <li><strong>load_use_hazard</strong> — specifically triggers the stalling path</li>
+                <li><strong>branch_cmp</strong> — exercises all six branch conditions and the flush mechanism</li>
+                <li><strong>jal_fwd_hazard</strong> — tests JAL with forwarding-dependent operands</li>
+                <li><strong>store_load</strong> — exercises the WM forwarding path from WB to the M stage store port</li>
+            </ul>
+            <p>I automated everything through a set of Python scripts. Running all 102 tests (across both the pipelined and single-cycle implementations) and saving timestamped results takes a single command. All 102 tests pass.</p>
+
+            <h2>What I learned</h2>
+            <p>Building a pipeline from scratch forced me to think carefully about timing in a way that single-cycle and behavioral-level designs do not. Forwarding in particular required tracing every data path through the pipeline and deciding, for every possible pair of consecutive instructions, whether a hazard exists and which mux select line resolves it. Getting the forwarding priority logic right — MX before WX when both match — took several iterations of testbench-driven debugging.</p>
+            <p>The experience also gave me a concrete feel for the tradeoffs real architects make: static branch prediction is simple to implement but burns cycles on every taken branch; a branch predictor would recover those cycles at the cost of significantly more hardware and design complexity. Designing within those tradeoffs, rather than just reading about them, is what made this project valuable.</p>
+        </div>
+    </div>
+</body>
+</html>

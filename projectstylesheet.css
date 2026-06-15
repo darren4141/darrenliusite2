@@ -1,21 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap');
+
 :root {
-    /* === Color Palette === */
-    --color-bg: #D1D5DB;              /* Deeper light grey background */
-    --color-surface: #F1F3F5;         /* Cards/containers - softer white */
-    --color-surface-alt: #DADDE1;     /* Alternate surface for project sections */
-    --color-text: #1F1F1F;            /* Dark grey, almost black */
-    --color-muted: #5E636E;           /* Muted/subtitle text */
-    --color-accent: #3B82F6;          /* Stronger blue accent (accessible and modern) */
-    --color-border: #B8BCC4;          /* Defined soft border */
-    --color-overlay: rgba(0, 0, 0, 0.06); /* Soft hover overlay */
+    --color-bg: #D1D5DB;
+    --color-surface: #F1F3F5;
+    --color-surface-alt: #DADDE1;
+    --color-text: #1F1F1F;
+    --color-muted: #5E636E;
+    --color-accent: #3B82F6;
+    --color-border: #B8BCC4;
     --color-white: #FFFFFF;
     --color-black: #000000;
-
-    /* === Font Families === */
+    --shadow: 0 0 10px rgba(0, 0, 0, 0.15);
     --font-primary: "Exo 2", sans-serif;
-    --font-heading: 'Exo 2', sans-serif;
-
 }
 
 body {
@@ -32,10 +28,10 @@ body {
     max-width: 1000px;
     margin: 40px auto;
     padding: 20px;
-    background-color: var(--color-surface);
+    background-color: var(--color-surface-alt);
     border: 1px solid var(--color-border);
     border-radius: 10px;
-    box-shadow: 0 0 10px var(--color-shadow);
+    box-shadow: var(--shadow);
 }
 
 .close-button {
@@ -59,11 +55,6 @@ body {
 .project-text {
     text-align: center;
     padding: 20px;
-    background-color: var(--color-surface-alt); /* NEW background color */
-}
-
-.project-content {
-    background-color: var(--color-surface-alt); /* NEW background color */
 }
 
 .project-text p {
@@ -82,12 +73,9 @@ ul, ol {
     color: var(--color-text);
 }
 
-/* ------ RESPONSIVE ADJUSTMENTS ------ */
-
+/* === RESPONSIVE === */
 @media (max-width: 768px) {
-    body {
-        font-size: 12px;
-    }
+    body { font-size: 12px; }
 
     .project-content {
         margin: 20px auto;
@@ -100,27 +88,14 @@ ul, ol {
         right: 15px;
     }
 
-    .project-image {
-        height: 250px;
-    }
-
-    .project-text p {
-        font-size: 12px;
-    }
-
-    .subtitle {
-        font-size: 10px;
-    }
-
-    ul, ol {
-        font-size: 12px;
-    }
+    .project-image { height: 250px; }
+    .project-text p { font-size: 12px; }
+    .subtitle { font-size: 10px; }
+    ul, ol { font-size: 12px; }
 }
 
 @media (max-width: 480px) {
-    body {
-        font-size: 8px;
-    }
+    body { font-size: 12px; }
 
     .close-button {
         font-size: 50px;
@@ -128,19 +103,8 @@ ul, ol {
         right: 10px;
     }
 
-    .project-image {
-        height: 200px;
-    }
-
-    .project-text p {
-        font-size: 8px;
-    }
-
-    .subtitle {
-        font-size: 8px;
-    }
-
-    ul, ol {
-        font-size: 8px;
-    }
+    .project-image { height: 200px; }
+    .project-text p { font-size: 12px; }
+    .subtitle { font-size: 12px; }
+    ul, ol { font-size: 12px; }
 }

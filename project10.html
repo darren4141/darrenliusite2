@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bare-Metal RTOS for Raspberry Pi CM4</title>
+    <link rel="stylesheet" href="projectstylesheet.css">
+    <style>
+        pre {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px;
+            font-size: 13px;
+            overflow-x: auto;
+            text-align: left;
+            line-height: 1.55;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+            text-align: left;
+            margin: 16px 0;
+        }
+        th {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            padding: 10px 12px;
+            font-weight: 600;
+        }
+        td {
+            border: 1px solid var(--color-border);
+            padding: 10px 12px;
+        }
+        tr:nth-child(even) td {
+            background-color: var(--color-surface);
+        }
+    </style>
+</head>
+<body>
+    <div class="project-content">
+        <a href="index.html" class="close-button">&times;</a>
+        <div class="project-text">
+            <h1>Bare-Metal RTOS for Raspberry Pi CM4</h1>
+            <h2 class="subtitle">2025 – 2026</h2>
+
+            <p>I built a preemptive real-time operating system from scratch in C and ARM assembly, targeting the Raspberry Pi Compute Module 4 (BCM2711, Cortex-A72). The OS runs entirely bare-metal — no Linux, no U-Boot, no libraries — and implements a priority-based preemptive scheduler, IRQ-driven context switching, hardware drivers, and a UART bootloader with a firmware update protocol. Everything from the reset vector to the task scheduler is code I wrote.</p>
+            <p>The project is available on <a href="https://github.com/darren4141/rpitos" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
+
+            <h2>Target Hardware</h2>
+            <p>The CM4 boots the CPU in HYP mode (ARM hypervisor mode), which requires a specific exit sequence before the kernel can run. The physical timer runs at 54 MHz and is separate from the ARM peripheral bus. The GIC-400 interrupt controller handles interrupt routing to each core. All of these are details that normal Linux-based development abstracts away, but on bare metal I had to handle each one explicitly.</p>
+
+            <table>
+                <tr><th>Resource</th><th>Value</th></tr>
+                <tr><td>SoC</td><td>BCM2711, Cortex-A72, ARMv8-A</td></tr>
+                <tr><td>Execution mode</td><td>AArch32 (32-bit ARM)</td></tr>
+                <tr><td>GPIO base</td><td>0xFE200000</td></tr>
+                <tr><td>PL011 UART0 base</td><td>0xFE201000</td></tr>
+                <tr><td>GIC-400 distributor</td><td>0xFF841000</td></tr>
+                <tr><td>ARM Generic Timer freq</td><td>54 MHz</td></tr>
+                <tr><td>Kernel load address</td><td>0x88400</td></tr>
+                <tr><td>Bootloader load address</td><td>0x8000</td></tr>
+            </table>
+
+            <h2>Startup Sequence</h2>
+            <p>The firmware hands control to the reset handler at 0x8000 in HYP mode. The first thing I have to do is get out of HYP mode so the kernel can use normal SVC-mode system calls. I do this by writing a synthetic return address into ELR_hyp and executing an ERET instruction, which atomically transitions to SVC mode and jumps to the stack setup code. From there I enable physical timer access at EL1, disable the D-cache and I-cache (the firmware enables them, which breaks MMIO reads), set up a separate banked stack for each ARM mode, zero the BSS, set the VBAR exception vector base, and call <code>kmain()</code>.</p>
+
+<pre>
+Reset (HYP mode)
+     │
+     ▼
+Park secondary cores (MPIDR check)
+     │
+     ▼
+Enable physical timer access at EL2
+(CNTHCTL_EL2 bits [1:0] = 0b11)
+     │
+     ▼
+Exit HYP → SVC mode (ERET)
+     │
+     ▼
+Disable D-cache and I-cache
+(SCTLR.C = 0, SCTLR.I = 0)
+     │
+     ▼
+Set up banked stacks (switch through each mode):
+  FIQ  → 512 B
+  IRQ  → 1 KB
+  ABT  → 512 B
+  UND  → 512 B
+  SYS  → 4 KB
+  SVC  → 4 KB   ← task stacks live here
+     │
+     ▼
+Zero BSS, set VBAR = _start
+     │
+     ▼
+kmain()
+</pre>
+
+            <h2>Memory Layout</h2>
+            <p>I split the address space between a bootloader image and the kernel application image, with a small shared-flags region in between. The bootloader lives at the standard RPi load address (0x8000) and is responsible for validating and jumping to the kernel. A 1 KB shared-flags block at 0x88000 lets the bootloader communicate with the kernel across a firmware update cycle — it holds a magic number, a DFU-requested flag, and a CRC validity flag that survive the jump.</p>
+
+<pre>
+Physical Memory Map
+───────────────────────────────────────────────
+0x0000  ┌─────────────────────────────────────┐
+        │       VideoCore GPU firmware         │
+        │     (managed by VC firmware, DO      │
+        │      NOT touch sectors 0–2047)       │
+0x8000  ├─────────────────────────────────────┤
+        │          Bootloader image            │
+        │            (boot7l.img)              │
+        │       Loaded by GPU firmware         │
+        │       Entry: boot vector table       │
+0x88000 ├─────────────────────────────────────┤
+        │      Shared Boot Flags (1 KB)        │
+        │  magic | dfu_requested | fw_crc_ok   │
+        │  Survives bootloader → kernel jump   │
+0x88400 ├─────────────────────────────────────┤
+        │          Kernel image                │
+        │           (kernel7l.img)             │
+        │   .text → .rodata → .data → .bss    │
+        │   Followed by per-mode stacks:       │
+        │     FIQ(512B) IRQ(1KB) ABT(512B)    │
+        │     UND(512B) SYS(4KB) SVC(4KB)     │
+        │   Then: 16 KB static heap            │
+        │     (TCBs, task stacks)              │
+        └─────────────────────────────────────┘
+
+eMMC Sector Layout
+───────────────────────────────────────────────
+Sector 0–2047      VideoCore firmware
+Sector 2048        boot7l.img  (bootloader)
+Sector 4096        kernel7l.img (application)
+Sector 8192        Firmware metadata
+Sector 8256        DFU scratch buffer
+</pre>
+
+            <h2>The Scheduler</h2>
+            <p>The scheduler uses six separate ready lists, one per priority level, and a single sorted delay list for blocked tasks. All list operations use an intrusive doubly-linked list: each Task Control Block (TCB) contains two embedded <code>ListItem</code> structs, one for the ready/blocked list and one for future event synchronization. This avoids any dynamic allocation inside the scheduler itself and keeps insertion and removal O(1).</p>
+
+<pre>
+Scheduler Data Structures
+─────────────────────────────────────────────────────────────
+
+ready_list[PRIORITY_5]  ←── head ↔ TCB ↔ TCB ↔ TCB  (highest priority)
+ready_list[PRIORITY_4]  ←── head ↔ TCB
+ready_list[PRIORITY_3]  ←── head ↔ TCB ↔ TCB
+ready_list[PRIORITY_2]  ←── head (UART task lives here)
+ready_list[PRIORITY_1]  ←── head
+ready_list[PRIORITY_0]  ←── head (lowest priority)
+
+blocked_task_list       ←── sorted by wakeup_time ascending
+                              head ↔ TCB[t=105] ↔ TCB[t=200] ↔ TCB[t=500]
+
+Task Control Block (TCB)
+┌──────────────────────────────┐
+│  p_TopOfStack  ──────────────┼──► (current SP, swapped on context switch)
+│  p_Stack                     │
+│  stackDepth                  │
+│  taskId                      │
+│  currentState (READY/RUNNING │
+│               /BLOCKED)      │
+│  priority                    │
+│  wakeup_time                 │
+│  state_list_item  ◄──────────┼──── embedded in ready or blocked list
+│  event_list_item             │
+└──────────────────────────────┘
+</pre>
+
+            <p>On every 1 ms tick the scheduler scans from PRIORITY_5 down to PRIORITY_0 and picks the index task from the highest non-empty ready list. If multiple tasks share the same priority, a round-robin index advances one step each tick, giving each equal CPU time. The currently running task is marked RUNNING; all others in the ready lists are marked READY.</p>
+
+<pre>
+schedulerSwitchContext() — called every 1 ms tick
+─────────────────────────────────────────────────
+1. If current task is RUNNING → mark READY, advance round-robin index
+
+2. Scan priority levels top-down:
+   PRIORITY_5 non-empty? ──YES──► run head task at index
+        │                                   │
+        NO                           mark RUNNING, done
+        │
+   PRIORITY_4 non-empty? ──YES──► ...
+        │
+        NO
+        │
+   PRIORITY_3 ...
+   PRIORITY_2 ...
+   PRIORITY_1 ...
+   PRIORITY_0 ...
+</pre>
+
+            <h2>Task Lifecycle</h2>
+            <p>A task is created with <code>task_create()</code>, which allocates a TCB and a stack from the 16 KB static heap, initializes the stack to look like a task that was interrupted mid-execution (so the context-restore code in the IRQ handler works correctly from the very first switch), and inserts it into the appropriate ready list. From there a task cycles between READY, RUNNING, and BLOCKED states driven by the tick interrupt.</p>
+
+<pre>
+Task State Machine
+──────────────────────────────────────────────────────────
+                   task_create()
+                        │
+                        ▼
+    ┌─────────────────READY ◄──────────────────────────┐
+    │                  ▲                               │
+    │   schedulerSwitchContext() selects this task      │
+    │                  │                               │
+    │                  ▼                               │
+    │              RUNNING                             │
+    │                  │                               │
+    │   task calls task_delay_ms() / task_delay_until()│
+    │                  │                               │
+    │                  ▼                               │
+    └───────────────BLOCKED                            │
+                       │                               │
+         tick_handler: wakeup_time <= tick_count       │
+                       │                               │
+                       └───────────────────────────────┘
+
+task_delay_until_ms() — drift-free periodic task
+─────────────────────────────────────────────────
+  next_wake += period          ← update BEFORE sleeping
+  block_until(next_wake)       ← wait for that exact tick
+
+vs. task_delay_ms(N)           ← can drift: sleeps N ticks
+                                  from whenever it wakes up,
+                                  not from when it was due
+</pre>
+
+            <h2>Context Switching</h2>
+            <p>Context switching happens inside the IRQ handler, which fires every 1 ms from the ARM Generic Timer. The ARM hardware does not automatically save registers on an IRQ — that is entirely my responsibility. The handler saves the interrupted task's full register set (r0–r12, LR, SPSR) to that task's SVC-mode stack, calls the scheduler to pick the next task, then restores from the new task's stack and returns.</p>
+
+<pre>
+IRQ Handler — Register Save / Restore
+──────────────────────────────────────────────────────────
+IRQ fires (CPU auto-saves nothing in AArch32 IRQ mode)
+     │
+     ▼
+sub  lr, lr, #4            // adjust LR_irq to point to interrupted instruction
+srsdb sp!, #0x13           // push {LR_irq, SPSR_irq} to SVC stack (mode 0x13)
+cps  #0x13                 // switch to SVC mode (now on task's stack)
+push {r0-r12}              // save general-purpose registers
+
+     Current task's SVC stack (grows downward):
+     ┌──────────────┐  ← SP before IRQ
+     │   r0         │
+     │   r1         │
+     │   ...        │
+     │   r12        │
+     │   LR_irq     │  (return address)
+     │   SPSR_irq   │  (interrupted task's CPSR)
+     └──────────────┘  ← task's p_TopOfStack saved here
+            │
+            ▼
+     Call timer_tick_handler()    // advance timer, unblock tasks
+     Call schedulerSwitchContext() // pick next task, update p_task_control_block
+
+     Load new task's SP from TCB
+            │
+            ▼
+     pop  {r0-r12}              // restore general-purpose registers
+     rfeia sp!                  // atomic: pop PC and CPSR, return to task
+                                // (also re-enables IRQs via CPSR.I)
+</pre>
+
+            <p>The key instruction is <code>rfeia sp!</code> — Return From Exception, Increment After. It atomically pops the saved PC and SPSR into the PC and CPSR in a single instruction, making the context switch race-free without needing to explicitly re-enable interrupts.</p>
+
+            <h2>Timer and Tick Source</h2>
+            <p>The 1 ms tick comes from the ARM Generic Timer's CNTP (non-secure physical timer), which is separate from the BCM peripheral timer and runs at a fixed 54 MHz regardless of CPU clock scaling. On each tick the handler reads the current compare value (CNTP_CVAL), adds exactly 54,000 counts (54 MHz / 1000 Hz) and writes it back — this prevents tick drift from accumulating over time because the next deadline is always relative to the previous one, not to when the handler actually ran.</p>
+
+<pre>
+ARM Generic Timer — 1 kHz Tick
+──────────────────────────────────────────────────────────
+CNTFRQ = 54,000,000 Hz
+tick_period = 54,000,000 / 1,000 = 54,000 counts
+
+Timer fires when CNTPCT >= CNTP_CVAL
+                                           54,000 counts
+                                        │◄────────────────►│
+───────────────────────────────────────────────────────────────►
+                         ▲                                 ▲
+                   IRQ fires here               CNTP_CVAL += 54000
+                   (tick_count++)                  (next deadline)
+
+In gentimer handler:
+  CNTP_CVAL = CNTP_CVAL + 54000   ← always relative to last deadline,
+                                     never relative to "now"
+</pre>
+
+            <h2>Task Stack Initialization</h2>
+            <p>When a task is first created, it has never run, so there is no saved context to restore. I pre-initialize each task's stack to look exactly like the IRQ handler just saved it — with the task function address as the saved PC, the task parameters in r0, and a CPSR value that puts the CPU in SVC mode with interrupts enabled. The first context switch into that task is then identical to restoring any other task's context.</p>
+
+<pre>
+Initial task stack layout (grows downward, set by task_create):
+                                           ← p_TopOfStack
+┌─────────────────────────────────────┐
+│  SPSR = 0x00000013 (SVC, IRQ on)   │  ← will become CPSR on first run
+│  PC   = &task_function              │  ← task entry point
+│  r12  = 0x00000000                  │
+│  r11  = 0x00000000                  │
+│  ...                                │
+│  r1   = 0x00000000                  │
+│  r0   = params pointer              │  ← first argument to task function
+└─────────────────────────────────────┘
+
+When rfeia restores this stack for the first time:
+  CPU enters SVC mode, IRQs enabled, jumps to task_function(params)
+  — identical to restoring a preempted task
+</pre>
+
+            <h2>Interrupt Routing</h2>
+            <p>The GIC-400 manages interrupt delivery to the cores. The ARM Generic Timer uses interrupt ID 30 (the non-secure physical timer PPI). I configure the GIC distributor to enable that interrupt, set its priority, and route it to Core 0. One gotcha on the CM4: the physical timer is in GIC security group 1 by default, which means the standard GIC GICD_ISENABLER route can be blocked. I work around this by also writing to the ARM Local timer routing register to force the interrupt to Core 0's IRQ line.</p>
+
+<pre>
+Interrupt Routing: Generic Timer → Core 0 IRQ
+──────────────────────────────────────────────────────────
+ARM Generic Timer (CNTP)
+        │
+        │  nCNTPNSIRQ (PPI #30)
+        ▼
+┌───────────────────────────────┐
+│         GIC-400               │
+│  Distributor (0xFF841000)     │
+│  ─ Enable PPI 30              │
+│  ─ Set priority 0x80          │
+│  ─ Enable distributor         │
+│                               │
+│  CPU Interface (0xFF842000)   │
+│  ─ Priority mask = 0xFF       │
+│  ─ Enable CPU interface       │
+└───────────────┬───────────────┘
+                │
+                │  + ARM Local routing register
+                │    (CORE_TIMER_IRQCNTL[0] bit 1)
+                │
+                ▼
+          Core 0 IRQ line
+                │
+                ▼
+         _irq_handler()
+         timer_tick_handler()
+         schedulerSwitchContext()
+</pre>
+
+            <h2>UART Driver</h2>
+            <p>The PL011 UART driver operates in two modes. In full mode (used by the kernel), transmit data goes into a 1024-byte ring buffer, and a dedicated UART task at PRIORITY_2 drains the buffer into the hardware whenever bytes are waiting. This keeps the calling task from blocking on slow UART writes. In minimal mode (used by the bootloader), the driver just spins until the TX FIFO has space — simpler but sufficient for the low-throughput bootloader protocol.</p>
+
+<pre>
+UART TX Path — Full Mode (Kernel)
+──────────────────────────────────────────────────────────
+Any task calls uart_printf("...")
+        │
+        ▼
+uart_tx() — interrupts disabled briefly
+  Writes bytes to ring buffer (1024 B)
+  ┌─────────────────────────────────────────┐
+  │ ring buffer: [b0][b1][b2]...[bN][ ][ ] │
+  │              ▲ tail                     │
+  │                                 ▲ head  │
+  └─────────────────────────────────────────┘
+        │
+        ▼  (separate task, PRIORITY_2)
+uart_task()
+  while (1):
+    if ring buffer not empty:
+      read byte → write to PL011 DR
+    else:
+      yield (task_delay_ms(1))
+</pre>
+
+            <h2>Bootloader and DFU</h2>
+            <p>I also wrote a separate bootloader image (boot7l.img) that loads first and is responsible for validating and jumping to the kernel. On startup it checks the shared boot flags: if a firmware update was requested, it enters DFU mode; otherwise it validates the kernel CRC and jumps to 0x88400. The DFU protocol operates over UART and uses a simple framed packet format with a 32-bit CRC for error detection.</p>
+
+<pre>
+Bootloader Startup Flow
+──────────────────────────────────────────────────────────
+Power on → GPU loads boot7l.img at 0x8000
+        │
+        ▼
+boot_flags valid?
+        │
+    YES─┴─NO → initialize boot_flags (first boot)
+        │
+        ▼
+DFU requested? ──YES──► Enter DFU mode (wait for UART upload)
+        │                        │
+        NO                       │
+        │                        │
+        ▼                        │
+App CRC valid?                   │
+        │                        │
+    YES─┴─NO → Enter DFU mode   │
+        │          │             │
+        │          ▼             │
+        │     Receive firmware   │
+        │     over UART          │
+        │     Write to eMMC ◄────┘
+        │     Validate CRC
+        │          │
+        ▼          ▼
+boot_loadApp()   boot_loadApp()
+ Read kernel from eMMC sector 4096
+ Copy to 0x88400
+        │
+        ▼
+boot_jumpToApp()
+ Disable interrupts
+ Data/instruction barriers
+ Branch to 0x88400 → kernel _start
+
+
+DFU Packet Format (UART)
+──────────────────────────────────────────────────────────
+┌──────┬──────────┬──────────────────┬────────┐
+│ CMD  │   LEN    │   DATA (≤256 B)  │  CRC32 │
+│ 1 B  │   2 B    │      N bytes     │  4 B   │
+└──────┴──────────┴──────────────────┴────────┘
+
+State machine: START → CMD → LENGTH → PAYLOAD → CRC → SUCCESS/ERROR
+
+Commands: REQ, START, DATA, FINISH, ABORT, GET_STATUS, RECOVER
+</pre>
+
+            <h2>Static Memory Model</h2>
+            <p>The kernel uses no dynamic memory allocation after boot. I wrote a 16 KB bump allocator that is only called during task creation — it advances a pointer forward and never frees anything. Since the number of tasks is fixed at compile time (MAX_NUM_TASKS = 16) and each task's stack depth is specified at creation, the total memory usage is deterministic and there is no risk of heap fragmentation causing a runtime failure.</p>
+
+<pre>
+Heap Layout (16 KB, bump allocator)
+──────────────────────────────────────────────────────────
+0x????  ┌───────────────────────────────┐ heap[0]
+        │  TCB for task 1  (fixed size) │
+        ├───────────────────────────────┤
+        │  Stack for task 1  (512 B)    │
+        ├───────────────────────────────┤
+        │  TCB for task 2               │
+        ├───────────────────────────────┤
+        │  Stack for task 2  (512 B)    │
+        ├───────────────────────────────┤
+        │  ...                          │
+        ├───────────────────────────────┤ ← heapOffset (current top)
+        │  (free)                       │
+        └───────────────────────────────┘ heap[16384]
+
+heap_malloc(size):
+  align size to 4 bytes
+  if heapOffset + size > 16384 → return NULL
+  ptr = &heap[heapOffset]
+  heapOffset += size
+  return ptr
+
+No free() — allocations are permanent (all at startup)
+</pre>
+
+            <h2>What I learned</h2>
+            <p>The most technically demanding part was getting the context switch right. The ARM architecture has separate banked registers for each privilege mode, and the srsdb / rfeia instructions are specifically designed for preemptive OS context switching — but using them incorrectly causes hard-to-debug crashes because the CPU silently uses the wrong stack pointer. I spent a significant amount of time working through which stack was active at each point in the IRQ handler, cross-referencing the ARM architecture reference manual.</p>
+            <p>A close second was the initial CM4 bringup. The firmware leaves the CPU in HYP mode with the D-cache enabled, and getting through those two issues (wrong mode for SVC calls, broken MMIO reads) required understanding the SCTLR vs HSCTLR distinction, the CNTHCTL_EL2 register that gates physical timer access, and the GIC security group restrictions. None of this appears in typical embedded tutorials because most people use a BSP that handles it.</p>
+            <p>Building the entire software stack myself — from the reset vector through the scheduler to the application tasks — gave me a much clearer picture of what an RTOS actually does versus what is provided by hardware. The scheduler is only about 250 lines of C. The context switch is about 30 lines of assembly. It turns out that the core of an RTOS is not especially large; the complexity is in understanding exactly what the hardware does and does not do for you.</p>
+        </div>
+    </div>
+</body>
+</html>
