@@ -6,7 +6,7 @@
   <link rel="icon" href="gears.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Darren Liu</title>
   <link rel="stylesheet" href="styles.css" />
@@ -15,41 +15,56 @@
 <body>
   <nav class="site-nav">
     <span class="site-nav__name">Darren Liu</span>
-    <div class="site-nav__links">
+  </nav>
+
+  <div class="site-hero">
+    <h1 class="site-hero__name">Darren Liu</h1>
+    <hr class="site-hero__divider" />
+    <p class="site-hero__role">Electrical Engineering &middot; University of Waterloo</p>
+    <p class="site-hero__tagline">Building hardware from schematic to silicon &mdash; flight controllers, custom PCBs, and bare-metal firmware.</p>
+    <div class="site-hero__links">
       <a href="https://github.com/darren4141" target="_blank">
-        <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" class="icon" />
+        <!-- GitHub mark -->
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-label="GitHub">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        GitHub
       </a>
       <a href="https://www.linkedin.com/in/darren-liu-414a14i/" target="_blank">
-        <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn" class="icon" />
+        <!-- LinkedIn in-mark -->
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-label="LinkedIn">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+        </svg>
+        LinkedIn
       </a>
       <a href="Resume_2A.pdf" target="_blank">
-        <img src="https://cdn-icons-png.flaticon.com/512/136/136522.png" alt="Resume" class="icon" />
+        <!-- Document icon -->
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-label="Resume">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6zm2-5h8v1.5H8V15zm0-3h8v1.5H8V12zm0-3h4v1.5H8V9z"/>
+        </svg>
+        Resume
       </a>
     </div>
-  </nav>
+  </div>
 
   <div class="project-grid">
 
-    <div class="project-card">
+    <div class="project-card project-card--featured">
       <a href="project10.html" class="project-thumb">
         <img src="project10/cover.png" alt="RTOS" />
         <div class="project-overlay">
           <h2>Bare-Metal RTOS for Raspberry Pi CM4</h2>
           <p>Preemptive scheduler, IRQ context switching, and UART bootloader in C and ARM assembly</p>
-          <hr />
-          <span class="learn-more">Click to learn more</span>
         </div>
       </a>
     </div>
 
-    <div class="project-card">
+    <div class="project-card project-card--featured">
       <a href="project9.html" class="project-thumb">
         <img src="project9/cover.png" alt="RISC-V CPU" />
         <div class="project-overlay">
           <h2>5-Stage Pipelined RISC-V CPU</h2>
           <p>Full RV32I pipeline with forwarding, stalling, and branch flushing in Verilog</p>
-          <hr />
-          <span class="learn-more">Click to learn more</span>
         </div>
       </a>
     </div>
@@ -59,8 +74,7 @@
         <img src="PCBanimation/FC4_Board/board render1.webp" alt="PCB Project" />
         <div class="project-overlay">
           <h2>My PCB Projects</h2>
-          <hr />
-          <span class="learn-more">Click to learn more</span>
+          <p>Seven custom boards — flight controllers, sensor interfaces, and motor drivers</p>
         </div>
       </a>
     </div>
@@ -71,8 +85,6 @@
         <div class="project-overlay">
           <h2>Custom Hardware + Firmware Interface for RPi 4</h2>
           <p>Full hardware + software stack for a Raspberry Pi 4 robotics application</p>
-          <hr />
-          <span class="learn-more">Click to learn more</span>
         </div>
       </a>
     </div>
@@ -82,9 +94,7 @@
         <img src="project7/cover.png" alt="Drone V2" />
         <div class="project-overlay">
           <h2>Mini Drone V2</h2>
-          <p>The second version of my custom quadcopter</p>
-          <hr />
-          <span class="learn-more">Click to learn more</span>
+          <p>Second iteration of my custom quadcopter — redesigned PCB, tighter firmware, improved stability</p>
         </div>
       </a>
     </div>
@@ -94,9 +104,7 @@
         <img src="project5/cover.png" alt="Swerve Drivetrain" />
         <div class="project-overlay">
           <h2>Differential Swerve Drivetrain</h2>
-          <p>Fully functional swerve drive</p>
-          <hr />
-          <span class="learn-more">Click to learn more</span>
+          <p>Fully functional swerve drive with independent wheel steering and drive control</p>
         </div>
       </a>
     </div>
@@ -106,9 +114,7 @@
         <img src="project6/cover.png" alt="Mini Drone" />
         <div class="project-overlay">
           <h2>Custom Mini Drone</h2>
-          <p>Fully custom mini drone from scratch</p>
-          <hr />
-          <span class="learn-more">Click to learn more</span>
+          <p>Scratch-built quadcopter with custom PCB, firmware, and 3D-printed frame</p>
         </div>
       </a>
     </div>
@@ -118,9 +124,7 @@
         <img src="project1/cover.png" alt="FRC 2024" />
         <div class="project-overlay">
           <h2>FIRST Robotics Competition 2024</h2>
-          <p>Projects from the 2024 competition</p>
-          <hr />
-          <span class="learn-more">Click to learn more</span>
+          <p>Hardware and software contributions to the 2024 FRC season</p>
         </div>
       </a>
     </div>
@@ -130,9 +134,7 @@
         <img src="project2/cover.png" alt="Drive Module" />
         <div class="project-overlay">
           <h2>Differential Swerve Drive Module</h2>
-          <p>Prototype wheel module rotating on two axes</p>
-          <hr />
-          <span class="learn-more">Click to learn more</span>
+          <p>Prototype wheel module rotating on two axes with PID-controlled motor pair</p>
         </div>
       </a>
     </div>
@@ -142,9 +144,7 @@
         <img src="project3/IMG_2233-removebg-preview.png" alt="FRC 2023" />
         <div class="project-overlay">
           <h2>FIRST Robotics Competition 2023</h2>
-          <p>Projects from the 2023 competition</p>
-          <hr />
-          <span class="learn-more">Click to learn more</span>
+          <p>Hardware and software contributions to the 2023 FRC season</p>
         </div>
       </a>
     </div>
@@ -154,9 +154,7 @@
         <img src="project4/cover.png" alt="Smart Bin" />
         <div class="project-overlay">
           <h2>Smart Trash Bin</h2>
-          <p>Trash bin using OpenCV and sensors to sort waste</p>
-          <hr />
-          <span class="learn-more">Click to learn more</span>
+          <p>Autonomous waste sorter using OpenCV classification and sensor-triggered actuation</p>
         </div>
       </a>
     </div>
