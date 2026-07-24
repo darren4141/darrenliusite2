@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry Pi Bootloader</title>
+    <link rel="stylesheet" href="projectstylesheet.css">
+    <style>
+        pre {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px;
+            font-size: 13px;
+            overflow-x: auto;
+            text-align: left;
+            line-height: 1.55;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+            text-align: left;
+            margin: 16px 0;
+        }
+        th {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            padding: 10px 12px;
+            font-weight: 600;
+        }
+        td {
+            border: 1px solid var(--color-border);
+            padding: 10px 12px;
+        }
+        tr:nth-child(even) td {
+            background-color: var(--color-surface);
+        }
+    </style>
+</head>
+<body>
+  <nav class="project-nav">
+    <a href="index.html" class="project-nav__name">Darren Liu</a>
+    <a href="index.html" class="project-nav__back">&#8592; All Projects</a>
+  </nav>
+  <div class="project-content">
+        <div class="project-text">
+            <h1>Raspberry Pi Bootloader</h1>
+            <h2 class="subtitle">2025 &ndash; 2026</h2>
+
+            <p>A bare-metal bootloader for the Raspberry Pi Compute Module 4 (BCM2711, Cortex-A72). It loads first, validates the kernel image, and hands off control to the RTOS &mdash; with support for firmware updates over UART (DFU) and image loading from eMMC. Written from scratch in C and ARM assembly.</p>
+            <p>The project is available on <a href="https://github.com/darren4141/rpitos" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
+
+            <h2>Overview</h2>
+            <p><em>Detailed write-up coming soon.</em></p>
+        </div>
+    </div>
+</body>
+</html>
