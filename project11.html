@@ -51,8 +51,70 @@
             <p>A bare-metal bootloader for the Raspberry Pi Compute Module 4 (BCM2711, Cortex-A72). It loads first, validates the kernel image, and hands off control to the RTOS &mdash; with support for firmware updates over UART (DFU) and image loading from eMMC. Written from scratch in C and ARM assembly.</p>
             <p>The project is available on <a href="https://github.com/darren4141/rpitos" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
 
-            <h2>Overview</h2>
-            <p><em>Detailed write-up coming soon.</em></p>
+            <h2>Startup Sequence</h2>
+            <p>The default RPi GPU firmware hands control to the reset handler at 0x8000 in HYP mode.</p>
+
+            <img src="project11\startupflow.png" alt="startup_flow", width="80%">
+
+            <h2>Memory Layout</h2>
+            <p>The boot chain is goes through three stages. They are all linked at fixed addresses so the next stage can be cleanly loaded.</p>
+            <p><strong>Bootstrap:</strong> The bootstrap image lives in the FAT32 partition provided by the RPi firmware and is loaded by the built-in GPU firmware. It brings up just enough (UART + eMMC) to CRC-validate and load the bootloader at 0x10000.</p>
+            <p><strong>Bootloader:</strong> The bootloader validates the app's CRC or alternatively it can trusts the preserved boot flags on a DFU-triggered warm reset. It is then responsible for loading the app. A 4 KB shared-flags region at 0x88000 carries the <code>BootFlags</code> struct (magic, reset reason, DFU-requested flag, CRC-valid flag).</p>
+            <p><strong>Application</strong> The app itself lives in one of two A/B slots on eMMC, so a bad flash can be rolled back without bricking the board.</p>
+            <img src="project11\memory_layout.png" alt="", width="90%">
+
+            <h2>Bootloader and DFU</h2>
+            <p>The bootloader image (boot7l.img) loads first and is responsible for validating and jumping to the kernel. On startup it checks the shared boot flags: if a firmware update was requested, it enters DFU mode; otherwise it validates the kernel CRC and jumps to 0x88400. The DFU protocol operates over UART and uses a simple framed packet format with a 32-bit CRC for error detection.</p>
+
+<pre>
+Bootloader Startup Flow
+──────────────────────────────────────────────────────────
+Power on → GPU loads boot7l.img at 0x8000
+        │
+        ▼
+boot_flags valid?
+        │
+    YES─┴─NO → initialize boot_flags (first boot)
+        │
+        ▼
+DFU requested? ──YES──► Enter DFU mode (wait for UART upload)
+        │                        │
+        NO                       │
+        │                        │
+        ▼                        │
+App CRC valid?                   │
+        │                        │
+    YES─┴─NO → Enter DFU mode   │
+        │          │             │
+        │          ▼             │
+        │     Receive firmware   │
+        │     over UART          │
+        │     Write to eMMC ◄────┘
+        │     Validate CRC
+        │          │
+        ▼          ▼
+boot_loadApp()   boot_loadApp()
+ Read kernel from eMMC sector 4096
+ Copy to 0x88400
+        │
+        ▼
+boot_jumpToApp()
+ Disable interrupts
+ Data/instruction barriers
+ Branch to 0x88400 → kernel _start
+
+
+DFU Packet Format (UART)
+──────────────────────────────────────────────────────────
+┌──────┬──────────┬──────────────────┬────────┐
+│ CMD  │   LEN    │   DATA (≤256 B)  │  CRC32 │
+│ 1 B  │   2 B    │      N bytes     │  4 B   │
+└──────┴──────────┴──────────────────┴────────┘
+
+State machine: START → CMD → LENGTH → PAYLOAD → CRC → SUCCESS/ERROR
+
+Commands: REQ, START, DATA, FINISH, ABORT, GET_STATUS, RECOVER
+</pre>
         </div>
     </div>
 </body>

@@ -248,6 +248,14 @@
             <p>I built a preemptive real-time operating system from scratch in C and ARM assembly, running on a Raspberry Pi Compute Module 4 (BCM2711, Cortex-A72). The OS runs entirely bare-metal and uses a priority-based preemptive scheduler, IRQ-driven context switching, hardware drivers, and synchronization primitives.</p>
             <p>See the code on <a href="https://github.com/darren4141/rpitos" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
 
+            <h2>Architecture</h2>
+            <p>I organized rpitos into the five tiers below, each one built with modularity in mind and on top of the tier beneath it.</p>
+            <p><strong>Base Kernel:</strong> The base kernel (scheduler, tasks, heap) manages CPU time and memory.</p>
+            <p><strong>Drivers:</strong> responsible for interfacing with hardware. The RTOS has drivers for serial communication, memory management, interrupt registration and handling, and internal timing, watchdog, and reset behavior.</p>
+            <p><strong>Kernel objects:</strong> common synchronization primitives (mutex, semaphore, queue, software timer). These are the only things allowed to actually block a task, and they're built entirely out of the scheduler's own primitives.</p>
+            <p><strong>Libraries:</strong> Generic libraries that sit on top of everything and only ever touch the RTOS through its published API, the same as application code would.</p>
+            <p><strong>Multicore support: </strong> Code to enable the multicore functionality of the RPi 4 is layered in sideways. rpitos uses a bound-multiprocessing (BMP) model, where each task is pinned to the core it was created on and never migrates. This means every core owns a completely independent scheduler instance, ready lists, and tick source. Most of the kernel has no idea multicore exists at all as each core runs as its own isolated system. Synchronization primitives are able to span cores and do so by gating with spinlocks.</p>
+
             <div class="system-tree">
                 <div class="tier tier--libraries">
                     <div class="tier__band">
@@ -290,10 +298,6 @@
                             <span class="comp-box__title">Software Timer</span>
                             <span class="comp-box__hint">View details &rarr;</span>
                         </button>
-                        <button class="comp-box" onclick="openNode('spinlock')">
-                            <span class="comp-box__title">Spinlock</span>
-                            <span class="comp-box__hint">View details &rarr;</span>
-                        </button>
                     </div>
                 </div>
 
@@ -326,8 +330,8 @@
                             <span class="comp-box__title">eMMC</span>
                             <span class="comp-box__hint">View details &rarr;</span>
                         </button>
-                        <button class="comp-box" onclick="openNode('gic')">
-                            <span class="comp-box__title">GIC</span>
+                        <button class="comp-box" onclick="openNode('gic-interrupts')">
+                            <span class="comp-box__title">GIC &amp; Interrupts</span>
                             <span class="comp-box__hint">View details &rarr;</span>
                         </button>
                         <button class="comp-box" onclick="openNode('gentimer')">
@@ -340,10 +344,6 @@
                         </button>
                         <button class="comp-box" onclick="openNode('i2s')">
                             <span class="comp-box__title">I2S</span>
-                            <span class="comp-box__hint">View details &rarr;</span>
-                        </button>
-                        <button class="comp-box" onclick="openNode('interrupts')">
-                            <span class="comp-box__title">Interrupts</span>
                             <span class="comp-box__hint">View details &rarr;</span>
                         </button>
                         <button class="comp-box" onclick="openNode('jtag')">
@@ -410,385 +410,21 @@
                             <span class="comp-box__title">Companion Core</span>
                             <span class="comp-box__hint">View details &rarr;</span>
                         </button>
+                        <button class="comp-box" onclick="openNode('spinlock')">
+                            <span class="comp-box__title">Spinlock</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <h2>Startup Sequence</h2>
-            <p>The default RPi GPU firmware hands control to the reset handler at 0x8000 in HYP mode.</p>
+            <h2>Surviving a bad update</h2>
+            <p>I didn't want a bad firmware flash to be able to brick the board, so the RTOS and the bootloader cooperate through a small piece of shared state on eMMC instead of just trusting that a freshly flashed app works. The app lives in one of two A/B slots; every time a new slot gets flashed, the bootloader marks it "on trial" before jumping to it. If that app can prove it's alive, the trial (it calls wdt_meta_confirm_slot()) after it's been healthy for a configured amount of time. The flag clears and that slot becomes the new default. If it can't, because it crashed, hung, or never got that far, the watchdog resets the board, the reset count in the shared metadata climbs, and once that count passes a configured tolerance the bootloader stops trusting the new slot and falls back to the last one that confirmed itself.</p>
 
-            <img src="project10\startupflow.png" alt="startup_flow", width="80%">
+            <h2>Visualizing the RTOS with the telemetry client</h2>
+            <p>An RTOS with no display is hard to introspect by staring at a UART console, so I built a companion desktop app: a Rust/egui GUI that connects to a running board over its own dedicated telemetry UART channel. It decodes a small framed wire protocol into live scheduler and task state.</p>
+            <p>The client renders scheduler dynamics and per-core status in real time, tracks which tasks are currently blocked and on what, and includes its own DFU panel that drives the exact same firmware-update protocol the bootloader implements, so I can push a full update from the host GUI instead of a separate command-line tool.</p>
 
-            <h2>Memory Layout</h2>
-            <p>The boot chain is actually three separate images now, not two — a minimal bootstrap that lives on the SD card, a self-updatable bootloader on eMMC, and the RTOS application itself — each linked at its own fixed address so loading the next stage never overwrites the one currently executing. The bootstrap (0x8000) is what the GPU firmware loads; it brings up just enough (UART + eMMC) to CRC-validate and load the bootloader at 0x10000. The bootloader is the real policy layer: it validates the app's CRC (or trusts the preserved boot flags on a DFU-triggered warm reset), opens a short DFU recovery window, and loads the app at 0x88400. A 4 KB shared-flags region at 0x88000 survives watchdog resets — it carries the <code>BootFlags</code> struct (magic, reset reason, DFU-requested flag, CRC-valid flag) and, at 0x88300, the mailbox address a companion core's entry point gets written to before it's released (see the Companion Core box in the system map above). The app itself now lives in one of two A/B slots on eMMC, so a bad flash can be rolled back without bricking the board.</p>
-
-<pre>
-Physical Memory Map (RAM)
-───────────────────────────────────────────────
-0x0000  ┌─────────────────────────────────────┐
-        │       VideoCore GPU firmware         │
-        │   (loads bootstrap from SD card)     │
-0x8000  ├─────────────────────────────────────┤
-        │          Bootstrap image             │
-        │      (kernel7l.img, SD card)         │
-        │   inits UART + eMMC, CRC-validates   │
-        │   the bootloader, loads it, jumps    │
-        │   ASSERT(. <= 0x10000)               │
-0x10000 ├─────────────────────────────────────┤
-        │          Bootloader image            │
-        │   (eMMC — self-updatable over DFU)   │
-        │   validates app CRC / trusts boot    │
-        │   flags, opens DFU window, loads app │
-        │   ASSERT(. <= 0x88000)               │
-0x88000 ├─────────────────────────────────────┤
-        │   .shared_flags (4 KB, NOLOAD)       │
-        │   0x88000  BootFlags — magic |       │
-        │            reset_reason |            │
-        │            dfu_requested | fw_crc_ok │
-        │   0x88300  CORE_MAILBOX_ADDR —       │
-        │            companion-core entry ptr  │
-        │   Survives watchdog resets           │
-0x88400 ├─────────────────────────────────────┤
-        │             App image                │
-        │   .text → .rodata → .data → .bss    │
-        │   Followed by per-mode stacks:       │
-        │     FIQ(512B) IRQ(1KB) ABT(512B)    │
-        │     UND(512B) SYS(4KB) SVC(4KB)     │
-        │   Then: 256 KB static heap           │
-        │     (TCBs, task stacks, queues)      │
-        └─────────────────────────────────────┘
-
-eMMC Sector Layout  (firmware partition starts at LBA 1,064,960)
-───────────────────────────────────────────────────────────────
-Sector 0 – 1,064,959    FAT32 partition (holds kernel7l.img = bootstrap)
-FW_BASE + 0        Bootloader slot A — header + binary (256 KB reserved)
-FW_BASE + 512      Bootloader slot B — reserved, A/B not yet wired up
-FW_BASE + 1024     Metadata sector — WdtMeta (active slot, trial state, CRC)
-FW_BASE + 2048     App slot A — header + binary (8 MB reserved)
-FW_BASE + 18432    App slot B — header + binary (8 MB reserved)
-
-Active app slot is read from wdt_meta.active_app_slot (A or B) at boot.
-A slot that fails to confirm itself within APP_SLOT_TRIAL_MAX_ATTEMPTS (3)
-boot attempts gets rolled back to the other slot by the bootloader.
-</pre>
-
-            <h2>The Scheduler</h2>
-            <p>The scheduler uses six separate ready lists, one per priority level, and a single sorted delay list for blocked tasks. All list operations use an intrusive doubly-linked list: each Task Control Block (TCB) contains two embedded <code>ListItem</code> structs, one for the ready/blocked list and one for future event synchronization. This avoids any dynamic allocation inside the scheduler itself and keeps insertion and removal O(1).</p>
-
-<pre>
-Scheduler Data Structures
-─────────────────────────────────────────────────────────────
-
-ready_list[PRIORITY_5]  ←── head ↔ TCB ↔ TCB ↔ TCB  (highest priority)
-ready_list[PRIORITY_4]  ←── head ↔ TCB
-ready_list[PRIORITY_3]  ←── head ↔ TCB ↔ TCB
-ready_list[PRIORITY_2]  ←── head (UART task lives here)
-ready_list[PRIORITY_1]  ←── head
-ready_list[PRIORITY_0]  ←── head (lowest priority)
-
-blocked_task_list       ←── sorted by wakeup_time ascending
-                              head ↔ TCB[t=105] ↔ TCB[t=200] ↔ TCB[t=500]
-
-Task Control Block (TCB)
-┌──────────────────────────────┐
-│  p_TopOfStack  ──────────────┼──► (current SP, swapped on context switch)
-│  p_Stack                     │
-│  stackDepth                  │
-│  taskId                      │
-│  currentState (READY/RUNNING │
-│               /BLOCKED)      │
-│  priority                    │
-│  wakeup_time                 │
-│  state_list_item  ◄──────────┼──── embedded in ready or blocked list
-│  event_list_item             │
-└──────────────────────────────┘
-</pre>
-
-            <p>On every 1 ms tick the scheduler scans from PRIORITY_5 down to PRIORITY_0 and picks the index task from the highest non-empty ready list. If multiple tasks share the same priority, a round-robin index advances one step each tick, giving each equal CPU time. The currently running task is marked RUNNING; all others in the ready lists are marked READY.</p>
-
-<pre>
-schedulerSwitchContext() — called every 1 ms tick
-─────────────────────────────────────────────────
-1. If current task is RUNNING → mark READY, advance round-robin index
-
-2. Scan priority levels top-down:
-   PRIORITY_5 non-empty? ──YES──► run head task at index
-        │                                   │
-        NO                           mark RUNNING, done
-        │
-   PRIORITY_4 non-empty? ──YES──► ...
-        │
-        NO
-        │
-   PRIORITY_3 ...
-   PRIORITY_2 ...
-   PRIORITY_1 ...
-   PRIORITY_0 ...
-</pre>
-
-            <h2>Task Lifecycle</h2>
-            <p>A task is created with <code>task_create()</code>, which allocates a TCB and a stack from the 16 KB static heap, initializes the stack to look like a task that was interrupted mid-execution (so the context-restore code in the IRQ handler works correctly from the very first switch), and inserts it into the appropriate ready list. From there a task cycles between READY, RUNNING, and BLOCKED states driven by the tick interrupt.</p>
-
-<pre>
-Task State Machine
-──────────────────────────────────────────────────────────
-                   task_create()
-                        │
-                        ▼
-    ┌─────────────────READY ◄──────────────────────────┐
-    │                  ▲                               │
-    │   schedulerSwitchContext() selects this task      │
-    │                  │                               │
-    │                  ▼                               │
-    │              RUNNING                             │
-    │                  │                               │
-    │   task calls task_delay_ms() / task_delay_until()│
-    │                  │                               │
-    │                  ▼                               │
-    └───────────────BLOCKED                            │
-                       │                               │
-         tick_handler: wakeup_time <= tick_count       │
-                       │                               │
-                       └───────────────────────────────┘
-
-task_delay_until_ms() — drift-free periodic task
-─────────────────────────────────────────────────
-  next_wake += period          ← update BEFORE sleeping
-  block_until(next_wake)       ← wait for that exact tick
-
-vs. task_delay_ms(N)           ← can drift: sleeps N ticks
-                                  from whenever it wakes up,
-                                  not from when it was due
-</pre>
-
-            <h2>Context Switching</h2>
-            <p>Context switching happens inside the IRQ handler, which fires every 1 ms from the ARM Generic Timer. The ARM hardware does not automatically save registers on an IRQ — that is entirely my responsibility. The handler saves the interrupted task's full register set (r0–r12, LR, SPSR) to that task's SVC-mode stack, calls the scheduler to pick the next task, then restores from the new task's stack and returns.</p>
-
-<pre>
-IRQ Handler — Register Save / Restore
-──────────────────────────────────────────────────────────
-IRQ fires (CPU auto-saves nothing in AArch32 IRQ mode)
-     │
-     ▼
-sub  lr, lr, #4            // adjust LR_irq to point to interrupted instruction
-srsdb sp!, #0x13           // push {LR_irq, SPSR_irq} to SVC stack (mode 0x13)
-cps  #0x13                 // switch to SVC mode (now on task's stack)
-push {r0-r12}              // save general-purpose registers
-
-     Current task's SVC stack (grows downward):
-     ┌──────────────┐  ← SP before IRQ
-     │   r0         │
-     │   r1         │
-     │   ...        │
-     │   r12        │
-     │   LR_irq     │  (return address)
-     │   SPSR_irq   │  (interrupted task's CPSR)
-     └──────────────┘  ← task's p_TopOfStack saved here
-            │
-            ▼
-     Call timer_tick_handler()    // advance timer, unblock tasks
-     Call schedulerSwitchContext() // pick next task, update p_task_control_block
-
-     Load new task's SP from TCB
-            │
-            ▼
-     pop  {r0-r12}              // restore general-purpose registers
-     rfeia sp!                  // atomic: pop PC and CPSR, return to task
-                                // (also re-enables IRQs via CPSR.I)
-</pre>
-
-            <p>The key instruction is <code>rfeia sp!</code> — Return From Exception, Increment After. It atomically pops the saved PC and SPSR into the PC and CPSR in a single instruction, making the context switch race-free without needing to explicitly re-enable interrupts.</p>
-
-            <h2>Timer and Tick Source</h2>
-            <p>The 1 ms tick comes from the ARM Generic Timer's CNTP (non-secure physical timer), which is separate from the BCM peripheral timer and runs at a fixed 54 MHz regardless of CPU clock scaling. On each tick the handler reads the current compare value (CNTP_CVAL), adds exactly 54,000 counts (54 MHz / 1000 Hz) and writes it back — this prevents tick drift from accumulating over time because the next deadline is always relative to the previous one, not to when the handler actually ran.</p>
-
-<pre>
-ARM Generic Timer — 1 kHz Tick
-──────────────────────────────────────────────────────────
-CNTFRQ = 54,000,000 Hz
-tick_period = 54,000,000 / 1,000 = 54,000 counts
-
-Timer fires when CNTPCT >= CNTP_CVAL
-                                           54,000 counts
-                                        │◄────────────────►│
-───────────────────────────────────────────────────────────────►
-                         ▲                                 ▲
-                   IRQ fires here               CNTP_CVAL += 54000
-                   (tick_count++)                  (next deadline)
-
-In gentimer handler:
-  CNTP_CVAL = CNTP_CVAL + 54000   ← always relative to last deadline,
-                                     never relative to "now"
-</pre>
-
-            <h2>Task Stack Initialization</h2>
-            <p>When a task is first created, it has never run, so there is no saved context to restore. I pre-initialize each task's stack to look exactly like the IRQ handler just saved it — with the task function address as the saved PC, the task parameters in r0, and a CPSR value that puts the CPU in SVC mode with interrupts enabled. The first context switch into that task is then identical to restoring any other task's context.</p>
-
-<pre>
-Initial task stack layout (grows downward, set by task_create):
-                                           ← p_TopOfStack
-┌─────────────────────────────────────┐
-│  SPSR = 0x00000013 (SVC, IRQ on)   │  ← will become CPSR on first run
-│  PC   = &task_function              │  ← task entry point
-│  r12  = 0x00000000                  │
-│  r11  = 0x00000000                  │
-│  ...                                │
-│  r1   = 0x00000000                  │
-│  r0   = params pointer              │  ← first argument to task function
-└─────────────────────────────────────┘
-
-When rfeia restores this stack for the first time:
-  CPU enters SVC mode, IRQs enabled, jumps to task_function(params)
-  — identical to restoring a preempted task
-</pre>
-
-            <h2>Interrupt Routing</h2>
-            <p>The GIC-400 manages interrupt delivery to the cores. The ARM Generic Timer uses interrupt ID 30 (the non-secure physical timer PPI). I configure the GIC distributor to enable that interrupt, set its priority, and route it to Core 0. One gotcha on the CM4: the physical timer is in GIC security group 1 by default, which means the standard GIC GICD_ISENABLER route can be blocked. I work around this by also writing to the ARM Local timer routing register to force the interrupt to Core 0's IRQ line.</p>
-
-<pre>
-Interrupt Routing: Generic Timer → Core 0 IRQ
-──────────────────────────────────────────────────────────
-ARM Generic Timer (CNTP)
-        │
-        │  nCNTPNSIRQ (PPI #30)
-        ▼
-┌───────────────────────────────┐
-│         GIC-400               │
-│  Distributor (0xFF841000)     │
-│  ─ Enable PPI 30              │
-│  ─ Set priority 0x80          │
-│  ─ Enable distributor         │
-│                               │
-│  CPU Interface (0xFF842000)   │
-│  ─ Priority mask = 0xFF       │
-│  ─ Enable CPU interface       │
-└───────────────┬───────────────┘
-                │
-                │  + ARM Local routing register
-                │    (CORE_TIMER_IRQCNTL[0] bit 1)
-                │
-                ▼
-          Core 0 IRQ line
-                │
-                ▼
-         _irq_handler()
-         timer_tick_handler()
-         schedulerSwitchContext()
-</pre>
-
-            <h2>UART Driver</h2>
-            <p>The PL011 UART driver operates in two modes. In full mode (used by the kernel), transmit data goes into a 1024-byte ring buffer, and a dedicated UART task at PRIORITY_2 drains the buffer into the hardware whenever bytes are waiting. This keeps the calling task from blocking on slow UART writes. In minimal mode (used by the bootloader), the driver just spins until the TX FIFO has space — simpler but sufficient for the low-throughput bootloader protocol.</p>
-
-<pre>
-UART TX Path — Full Mode (Kernel)
-──────────────────────────────────────────────────────────
-Any task calls uart_printf("...")
-        │
-        ▼
-uart_tx() — interrupts disabled briefly
-  Writes bytes to ring buffer (1024 B)
-  ┌─────────────────────────────────────────┐
-  │ ring buffer: [b0][b1][b2]...[bN][ ][ ] │
-  │              ▲ tail                     │
-  │                                 ▲ head  │
-  └─────────────────────────────────────────┘
-        │
-        ▼  (separate task, PRIORITY_2)
-uart_task()
-  while (1):
-    if ring buffer not empty:
-      read byte → write to PL011 DR
-    else:
-      yield (task_delay_ms(1))
-</pre>
-
-            <h2>Bootloader and DFU</h2>
-            <p>I also wrote a separate bootloader image (boot7l.img) that loads first and is responsible for validating and jumping to the kernel. On startup it checks the shared boot flags: if a firmware update was requested, it enters DFU mode; otherwise it validates the kernel CRC and jumps to 0x88400. The DFU protocol operates over UART and uses a simple framed packet format with a 32-bit CRC for error detection.</p>
-
-<pre>
-Bootloader Startup Flow
-──────────────────────────────────────────────────────────
-Power on → GPU loads boot7l.img at 0x8000
-        │
-        ▼
-boot_flags valid?
-        │
-    YES─┴─NO → initialize boot_flags (first boot)
-        │
-        ▼
-DFU requested? ──YES──► Enter DFU mode (wait for UART upload)
-        │                        │
-        NO                       │
-        │                        │
-        ▼                        │
-App CRC valid?                   │
-        │                        │
-    YES─┴─NO → Enter DFU mode   │
-        │          │             │
-        │          ▼             │
-        │     Receive firmware   │
-        │     over UART          │
-        │     Write to eMMC ◄────┘
-        │     Validate CRC
-        │          │
-        ▼          ▼
-boot_loadApp()   boot_loadApp()
- Read kernel from eMMC sector 4096
- Copy to 0x88400
-        │
-        ▼
-boot_jumpToApp()
- Disable interrupts
- Data/instruction barriers
- Branch to 0x88400 → kernel _start
-
-
-DFU Packet Format (UART)
-──────────────────────────────────────────────────────────
-┌──────┬──────────┬──────────────────┬────────┐
-│ CMD  │   LEN    │   DATA (≤256 B)  │  CRC32 │
-│ 1 B  │   2 B    │      N bytes     │  4 B   │
-└──────┴──────────┴──────────────────┴────────┘
-
-State machine: START → CMD → LENGTH → PAYLOAD → CRC → SUCCESS/ERROR
-
-Commands: REQ, START, DATA, FINISH, ABORT, GET_STATUS, RECOVER
-</pre>
-
-            <h2>Static Memory Model</h2>
-            <p>The kernel uses no dynamic memory allocation after boot. I wrote a 16 KB bump allocator that is only called during task creation — it advances a pointer forward and never frees anything. Since the number of tasks is fixed at compile time (MAX_NUM_TASKS = 16) and each task's stack depth is specified at creation, the total memory usage is deterministic and there is no risk of heap fragmentation causing a runtime failure.</p>
-
-<pre>
-Heap Layout (16 KB, bump allocator)
-──────────────────────────────────────────────────────────
-0x????  ┌───────────────────────────────┐ heap[0]
-        │  TCB for task 1  (fixed size) │
-        ├───────────────────────────────┤
-        │  Stack for task 1  (512 B)    │
-        ├───────────────────────────────┤
-        │  TCB for task 2               │
-        ├───────────────────────────────┤
-        │  Stack for task 2  (512 B)    │
-        ├───────────────────────────────┤
-        │  ...                          │
-        ├───────────────────────────────┤ ← heapOffset (current top)
-        │  (free)                       │
-        └───────────────────────────────┘ heap[16384]
-
-heap_malloc(size):
-  align size to 4 bytes
-  if heapOffset + size > 16384 → return NULL
-  ptr = &heap[heapOffset]
-  heapOffset += size
-  return ptr
-
-No free() — allocations are permanent (all at startup)
-</pre>
-
-            <h2>What I learned</h2>
-            <p>The most technically demanding part was getting the context switch right. The ARM architecture has separate banked registers for each privilege mode, and the srsdb / rfeia instructions are specifically designed for preemptive OS context switching — but using them incorrectly causes hard-to-debug crashes because the CPU silently uses the wrong stack pointer. I spent a significant amount of time working through which stack was active at each point in the IRQ handler, cross-referencing the ARM architecture reference manual.</p>
-            <p>A close second was the initial CM4 bringup. The firmware leaves the CPU in HYP mode with the D-cache enabled, and getting through those two issues (wrong mode for SVC calls, broken MMIO reads) required understanding the SCTLR vs HSCTLR distinction, the CNTHCTL_EL2 register that gates physical timer access, and the GIC security group restrictions. None of this appears in typical embedded tutorials because most people use a BSP that handles it.</p>
-            <p>Building the entire software stack myself — from the reset vector through the scheduler to the application tasks — gave me a much clearer picture of what an RTOS actually does versus what is provided by hardware. The scheduler is only about 250 lines of C. The context switch is about 30 lines of assembly. It turns out that the core of an RTOS is not especially large; the complexity is in understanding exactly what the hardware does and does not do for you.</p>
         </div>
     </div>
 
@@ -1022,11 +658,11 @@ struct SoftwareTimer {
 
     <div class="node-modal" id="modal-spinlock" hidden>
         <div class="node-modal__topbar">
-            <span class="node-modal__eyebrow">Kernel Object &middot; rpitos</span>
+            <span class="node-modal__eyebrow">Multicore &middot; rpitos</span>
             <button class="node-modal__close" onclick="closeNode('spinlock')">&larr; Close</button>
         </div>
-        <div class="node-modal__inner" style="--tier-hue:#5E7A63;">
-            <span class="node-modal__tag">Kernel Object</span>
+        <div class="node-modal__inner" style="--tier-hue:#6B4B6E;">
+            <span class="node-modal__tag">Multicore</span>
             <h2>Spinlock</h2>
             <p class="node-modal__lede">A cross-core lock using Lamport's Bakery algorithm.</p>
             <h3>Overview</h3>
@@ -1178,7 +814,7 @@ uart_channel_task_start(UART_CHANNEL_PRINT);
         <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
             <span class="node-modal__tag">Driver</span>
             <h2>CRC</h2>
-            <p class="node-modal__lede">CRC32 computed with the ARMv8 hardware crc32b/h/w instructions instead of a software lookup table.</p>
+            <p class="node-modal__lede">CRC32 computed with the ARMv8 hardware crc32b/h/w instructions.</p>
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
@@ -1200,8 +836,23 @@ uart_channel_task_start(UART_CHANNEL_PRINT);
         <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
             <span class="node-modal__tag">Driver</span>
             <h2>DMA</h2>
-            <p class="node-modal__lede">BCM2711 legacy DMA controller.</p>
-            <p><code>dma_channel_init()</code> powers on a channel; <code>dma_start()</code> kicks off a 32-byte-aligned <code>DmaControlBlock</code>; <code>dma_wait()</code> polls the CS.ACTIVE bit. UART TX is the current caller — it hands its largest contiguous ring-buffer run to DMA Lite channel 7, paced by UART TX DREQ 12 (see the UART page).</p>
+            <p class="node-modal__lede">BCM2711 legacy DMA controller used to allow other drivers to move data asynchronously.</p>
+            <p>Users declare a DmaControlBlock struct and register an ISR to unblock when the transaction is complete. The heaviest consumer of the DMA controller is the UART driver.</p>
+<pre>
+typedef struct {
+  uint32_t ti;          // transfer information (DMA_TI_* flags, DREQ pacing)
+  uint32_t source_ad;   // source bus address
+  uint32_t dest_ad;     // destination bus address
+  uint32_t txfr_len;    // transfer length in bytes
+  uint32_t stride;      // 2D stride (0 in linear mode)
+  uint32_t nextconbk;   // bus address of next CB, or 0 to stop
+  uint32_t reserved[2];
+} __attribute__((aligned(32))) DmaControlBlock;   // 8 words, DMA-visible RAM
+</pre>
+            <h3>How uart_tx_task uses it</h3>
+            <p>When a UART controller optionally enables DMA usage, the uart_tx task will instead copy the desired uart buffer address to a new DmaControlBlock, start the DMA operation, and wait on a semaphore. When the hardware finishes the DMA_IRQ fires and gives the semaphore back. Since the uart buffer is a ring buffer, in some cases where the buffer contents wrap around the physical array boundary, the DMA transaction is automatically split in two.</p>
+            <img src="project10\dma\uart_dma_usage.png" alt="", width="80%">
+
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
@@ -1221,8 +872,7 @@ uart_channel_task_start(UART_CHANNEL_PRINT);
         <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
             <span class="node-modal__tag">Driver</span>
             <h2>eMMC</h2>
-            <p class="node-modal__lede">The EMMC2 controller driver, used by the bootloader and app to read/write persistent storage (boot flags, bootloader &amp; app binaries).</p>
-            <p>Custom bootloader code may leave the EMMC2 controller fully initialized before this code ever runs, so <code>emmc_init()</code> checks <code>CTRL1_CLK_EN</code> and returns immediately if it's already set. <code>emmc_read_blocks()</code>/<code>emmc_write_blocks()</code> go through CMD17/CMD18/CMD24/CMD25, using ADMA2 when available and falling back to PIO; <code>emmc_write_blocks()</code> refuses any sector below <code>EMMC_FIRMWARE_FLOOR</code>, protecting the MBR and FAT boot partition from a stray write.</p>
+            <p class="node-modal__lede">The eMMC flash memory controller driver is used by the bootloader and app to read/write persistent storage (boot flags, bootloader &amp; app binaries).</p>
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
@@ -1233,51 +883,20 @@ uart_channel_task_start(UART_CHANNEL_PRINT);
         </div>
     </div>
 
-    <div class="node-modal" id="modal-gic" hidden>
+    <div class="node-modal" id="modal-gic-interrupts" hidden>
         <div class="node-modal__topbar">
             <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
-            <button class="node-modal__close" onclick="closeNode('gic')">&larr; Close</button>
+            <button class="node-modal__close" onclick="closeNode('gic-interrupts')">&larr; Close</button>
         </div>
         <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
             <span class="node-modal__tag">Driver</span>
-            <h2>GIC</h2>
-            <p class="node-modal__lede">GIC-400 plus the ARM Local per-core block, and one interrupt (the companion-core IPI) that skips the GIC entirely.</p>
-            <h3>Overview</h3>
-            <p><code>gic_distributor_init()</code> runs once globally. Every core, including core 0, must separately call <code>gic_percore_init()</code> to bring up its own banked CPU interface.</p>
-<pre>
-gic_distributor_init()        <- once, any core (core 0)
-        │
-        ▼
-core 0: gic_percore_init()  <- required, even though it's the boot core
-core 1: gic_percore_init()  <- required if released
-core 2: gic_percore_init()  <- required if released
-core 3: gic_percore_init()  <- required if released
-
-skip a core's call -> that core NEVER receives an IRQ, no matter what
-gic_distributor_init() / gic_enable_spi() did
-</pre>
-            <h3>How _irq_handler dispatches</h3>
-            <p>The assembly IRQ handler in <code>startup.s</code> checks the interrupt ID and routes it to the appropriate IRQ.</p>
-<pre>
-_irq_handler (startup.s), after saving r0-r12 to the task's own SVC stack:
-
-read this core's Core0 IRQ Source register (ARM Local)
-  bit 4 (mailbox 0) set?
-    yes -> mailbox_park_request$   (companion-core IPI —
-                                     GICC_IAR/EOIR never touched)
-    no  -> read GICC_IAR  (acknowledges + returns the pending INTID)
-             ID == 0x3FF ?  -> spurious, done
-             ID == 30 ?     -> cntx_switch$ — inline-asm context switch;
-                                calls timer_tick_handler() and
-                                scheduler_switch_context() in C, but the
-                                actual SP save/restore stays in assembly
-             else           -> cps to IRQ mode, bl irq_dispatch(intid)
-                                (the C table gic_enable_spi() callers
-                                 register into via irq_register())
-
-                        both of the last two cases fall through to:
-                        write GICC_EOIR with the saved IAR value
-</pre>
+            <h2>GIC &amp; Interrupts</h2>
+            <p class="node-modal__lede">GIC-400 interrupt routing, and a dispatch table every registered handler goes through.</p>
+            <h3>Initializing a new interrupt and interrupt execution flow:</h3>
+            <p><strong>GIC initialization:</strong> <code>gic_distributor_init()</code> runs once globally. Every core, including core 0, must separately call <code>gic_percore_init()</code> to bring up its own banked CPU interface.</p>
+            <p><strong>IRQ registration:</strong> <code>irq_register(intid, handler)</code> populates a flat 256-entry table (<code>g_handlers[intid]</code>) that the assembly <code>_irq_handler</code> calls into via <code>irq_dispatch(intid)</code>.</p>
+            <p><strong>ISR routing:</strong> When an interrupt fires, the PC jumps to the _irq_handler located in assembly startup code. It executes a context save and jumps to the appropriate ISR.</p>
+            <img src="project10\gic\interrupt_flow.png" alt="", width="90%">
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
@@ -1286,6 +905,10 @@ read this core's Core0 IRQ Source register (ARM Local)
                 <tr><td>gic_disable</td><td><code>void gic_disable(void);</code></td><td>Disable this core's GIC CPU interface and undo its timer/mailbox IRQ routing.</td></tr>
                 <tr><td>gic_enable_spi</td><td><code>void gic_enable_spi(uint32_t intid, uint8_t priority);</code></td><td>Enable a shared peripheral interrupt: priority, route to core 0, level-sensitive, enable.</td></tr>
                 <tr><td>gic_send_mailbox_ipi</td><td><code>void gic_send_mailbox_ipi(uint32_t target_core);</code></td><td>Send a targeted IPI to one core via its ARM Local mailbox 0 (bypasses the GIC).</td></tr>
+                <tr><td>irq_register</td><td><code>StatusCode irq_register(uint32_t intid, IrqHandler handler);</code></td><td>Register (or, with NULL, clear) the C handler for a GIC interrupt ID.</td></tr>
+                <tr><td>irq_dispatch</td><td><code>void irq_dispatch(uint32_t intid);</code></td><td>Invoke the handler registered for intid, or do nothing if none is registered.</td></tr>
+                <tr><td>enter_critical</td><td><code>static inline uint32_t enter_critical(void);</code></td><td>Disable IRQs and return the previous CPSR.</td></tr>
+                <tr><td>exit_critical</td><td><code>static inline void exit_critical(uint32_t saved_cpsr);</code></td><td>Restore a CPSR previously saved by enter_critical().</td></tr>
             </table>
         </div>
     </div>
@@ -1301,6 +924,7 @@ read this core's Core0 IRQ Source register (ARM Local)
             <p class="node-modal__lede">The physical timer (CNTP) that drives the 1&nbsp;kHz scheduler tick.</p>
             <h3>Overview</h3>
             <p><code>gentimer_init()</code> programs <code>CNTP_CVAL</code> for the first tick and enables the timer; <code>read_cntpct()</code> reads the free-running 64-bit physical counter.</p>
+            <p>The generic timer interrupt is treated as a special case by <code>_irq_handler</code> in assembly, directly calling (<code>cntx_switch$</code>) instead of routing it through the generic C dispatch table like every other interrupt.</p>
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
@@ -1319,8 +943,16 @@ read this core's Core0 IRQ Source register (ARM Local)
         <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
             <span class="node-modal__tag">Driver</span>
             <h2>I2C</h2>
-            <p class="node-modal__lede">One BSC controller driver shared across all six usable I2C channels.</p>
-            <p><code>i2c_channel_write()</code>/<code>read()</code> run the standard clear-status &rarr; set address/length &rarr; arm ST &rarr; poll FIFO &rarr; poll DONE sequence.</p>
+            <p class="node-modal__lede">Generic I2C driver with access to all six usable I2C channels.</p>
+            <p><code>i2c_channel_write()</code>/<code>read()</code> run a simple poll FIFO &rarr; poll DONE sequence.</p>
+<pre>
+typedef struct {
+  uint8_t     sda_pin;
+  uint8_t     scl_pin;
+  GPIOFunc    alt_func;   // ALT function sda_pin/scl_pin get muxed to
+  I2cBaudrate baudrate;   // I2C_BAUDRATE_STANDARD_100K or I2C_BAUDRATE_FAST_400K
+} I2cConfig;
+</pre>
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
@@ -1358,28 +990,6 @@ read this core's Core0 IRQ Source register (ARM Local)
         </div>
     </div>
 
-    <div class="node-modal" id="modal-interrupts" hidden>
-        <div class="node-modal__topbar">
-            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
-            <button class="node-modal__close" onclick="closeNode('interrupts')">&larr; Close</button>
-        </div>
-        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
-            <span class="node-modal__tag">Driver</span>
-            <h2>Interrupts</h2>
-            <p class="node-modal__lede">A flat, 256-entry INTID&rarr;handler table.</p>
-            <h3>Overview</h3>
-            <p><code>irq_register()</code> populates <code>g_handlers[intid]</code>; it never touches the GIC itself — enabling the interrupt at the GIC (or ARM Local controller) is a separate call the registering code makes on its own. <code>irq_dispatch(intid)</code> is what the assembly <code>_irq_handler</code> calls after reading either <code>GICC_IAR</code> or the ARM Local Core0 IRQ Source register, depending on which path fired.</p>
-            <p><code>irq_dispatch()</code> reads the table with no lock: a word-aligned pointer load is atomic on ARMv8, so there's nothing to race on the read side. <code>irq_register()</code> does take a critical section around its write, since a registration could otherwise race that read. It's intentionally the thinnest possible layer between the vector table and C handlers.</p>
-            <h3>API</h3>
-            <table>
-                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
-                <tr><td>irq_register</td><td><code>StatusCode irq_register(uint32_t intid, IrqHandler handler);</code></td><td>Register (or, with NULL, clear) the C handler for a GIC interrupt ID.</td></tr>
-                <tr><td>irq_dispatch</td><td><code>void irq_dispatch(uint32_t intid);</code></td><td>Invoke the handler registered for intid, or do nothing if none is registered.</td></tr>
-                <tr><td>enter_critical</td><td><code>static inline uint32_t enter_critical(void);</code></td><td>Disable IRQs and return the previous CPSR.</td></tr>
-                <tr><td>exit_critical</td><td><code>static inline void exit_critical(uint32_t saved_cpsr);</code></td><td>Restore a CPSR previously saved by enter_critical().</td></tr>
-            </table>
-        </div>
-    </div>
 
     <div class="node-modal" id="modal-jtag" hidden>
         <div class="node-modal__topbar">
@@ -1389,8 +999,7 @@ read this core's Core0 IRQ Source register (ARM Local)
         <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
             <span class="node-modal__tag">Driver</span>
             <h2>JTAG</h2>
-            <p class="node-modal__lede">One function that turns on hardware debugging.</p>
-            <p><code>jtag_gpio_init()</code> muxes the five ARM debug pins (TRST/TDO/TCK/TDI/TMS on GPIO 22/24/25/26/27) to ALT4, then sets bit 21 of the ARM Local <code>CHIPCTL_A</code> register — pin muxing alone doesn't route the debug controller to those pins without it.</p>
+            <p class="node-modal__lede">One function that enables hardware debugging.</p>
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
@@ -1456,9 +1065,8 @@ read this core's Core0 IRQ Source register (ARM Local)
                 <tr><th></th><th>system_hard_reset()</th><th>enter_bootloader()</th></tr>
                 <tr><td>Mechanism</td><td>Full SoC reset via the PM watchdog</td><td>Direct jump to the bootloader already in RAM</td></tr>
                 <tr><td>Speed</td><td>Slow — everything reloads from the SD card</td><td>Fast — no hardware reset at all</td></tr>
-                <tr><td>Safe from an ISR?</td><td>Yes</td><td><strong>No</strong> — see below</td></tr>
             </table>
-            <p><code>enter_bootloader()</code> zeros the entire <code>.stacks</code> region, including the IRQ-mode stack — harmless for a task (tasks run on their own pool-allocated stacks outside that region), but fatal from an ISR, which is actively running on <code>sp_irq</code> inside the region being zeroed out from under it. The rule this driver now enforces: irreversible teardown/reboot only happens from task context. An ISR that needs to trigger it just <code>semaphore_give()</code>s to a dedicated reboot task instead of calling it directly.</p>
+            <p><code>enter_bootloader()</code> zeros the entire <code>.stacks</code> region, including the IRQ-mode stack, then jumps to the bootloader. This is used during DFU.</p>
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
@@ -1476,24 +1084,42 @@ read this core's Core0 IRQ Source register (ARM Local)
         <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
             <span class="node-modal__tag">Driver</span>
             <h2>Watchdog</h2>
-            <p class="node-modal__lede">A free-running PM watchdog with A/B app-slot rollback.</p>
+            <p class="node-modal__lede">A watchdog driver that monitors the health of the RTOS, manages boot flags and supports multicore mode.</p>
             <h3>Overview</h3>
-            <p><code>watchdog_init()</code> arms the BCM2711 PM watchdog (timeout clamped to 1&ndash;15s) from a caller-owned <code>WatchdogConfig</code>; <code>watchdog_task_start()</code> kicks it every 2 seconds and, if configured, arms a confirm-slot timer that clears the current app's "on trial" flag once it's run long enough to be trusted. <code>wdt_meta</code> (persisted to eMMC, CRC-checked) tracks reset count, active slot, and trial state across reboots.</p>
-            <p>Because the kick lives on a task, it's tied to the scheduler running at all: halting the CPU with a JTAG debugger freezes every task including the one that kicks every 2 seconds, and the watchdog will fire a full SoC reset (resetting the debug logic mid-session too) if the configured timeout elapses while halted:</p>
+            <p><code>watchdog_init()</code> arms the BCM2711 PM watchdog (timeout clamped to 1&ndash;15s) from a caller-owned <code>WatchdogConfig</code>. The watchdog is kicked through a dedicated watchdog task.</p>
+            <p>If configured, the watchdog features a confirm-slot timer that clears the current app's "on trial" flag once it's run long enough to be trusted. <code>wdt_meta</code> (persisted to eMMC, CRC-checked) tracks reset count, active slot, and trial state across reboots.</p>
+            <h3>Watchdog config struct:</h3>
 <pre>
-JTAG halt (breakpoint/pause)
-   │
-   ▼
-scheduler frozen ──► watchdog_task can't kick ──► timeout elapses
-   │                                                       │
-   ▼                                                       ▼
-CoreSight/debug logic ◄──────── full SoC reset ◄───────────┘
-also reset mid-session
-
-Fix: comment out watchdog_init()/watchdog_task_start() before a JTAG
-session, unless you're specifically testing watchdog behavior.
+typedef struct {
+  uint32_t timeout_s;                         // clamped to [1, 15]s by watchdog_init()
+  WatchdogResetPolicy policy;                 // what the bootloader does past tolerance
+  int32_t  tolerance;                         // number of watchdog failures until the bootloder steps in
+  int64_t  confirm_delay_ms;                  // WATCHDOG_CONFIRM_MANUAL = confirm yourself
+  bool     multicore_mode;                    // aggregate kicks from every companion core
+  CompanionCoreContext *companion_core_ctx;   // required when multicore_mode is true
+} WatchdogConfig;
 </pre>
-            <p>Separately: <code>tolerance=0</code> in <code>WatchdogConfig</code> is not "never roll back" &mdash; the bootloader check is <code>wdt_reset_count &gt; tolerance</code>, so a tolerance of 0 trips the reset policy on the very first watchdog reset. Only a negative tolerance (<code>WATCHDOG_RESET_TOLERANCE_INFINITE</code>) actually disables it.</p>
+
+            <h3>Watchdog boot flags:</h3>
+<pre>
+typedef struct {
+  uint32_t magic;               // WDT_META_MAGIC; mismatch -> struct discarded
+  uint32_t wdt_reset_count;     // consecutive watchdog resets since last confirm
+  int32_t  wdt_reset_tolerance; // copy of WatchdogConfig.tolerance, persisted
+  uint32_t wdt_reset_policy;    // copy of WatchdogConfig.policy, persisted
+  uint32_t wdt_reset_reason;    // not yet written by the bootloader
+  uint32_t active_app_slot;     // APP_SLOT_A / APP_SLOT_B (see eMMC page)
+  uint32_t app_slot_trial;      // 1 = active slot unconfirmed (A/B trial)
+  uint32_t trial_boot_count;    // bootloader re-entries while on trial
+  uint32_t crc;                 // CRC32 over every field above; MUST be last
+} WdtMeta;   // lives in eMMC EMMC_SECTOR_METADATA; wdt_meta is the in-RAM shadow
+</pre>
+            <h3>Multicore kick aggregation</h3>
+            <p>When <code>multicore_mode</code> is on, <code>watchdog_core_kick()</code> doesn't touch the hardware watchdog directly, it's guarded. This guarantees that one failing core triggers a watchdog reset. The watchdog keeps track of which cores are initialized via the compantion core context struct.</p>
+            <img src="project10\watchdog\watchdog_kick_flow.png" alt="", width="50%">
+            <h3>Confirm-slot two-stage design</h3>
+            <p>The watchdog supports the bootloader's app-slotting feature. A one shot timer callback signals a semaphore, and a separate dedicated task performs the eMMC write that signals to the bootloader that the app is healthy..</p>
+
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
@@ -1520,8 +1146,7 @@ session, unless you're specifically testing watchdog behavior.
         <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
             <span class="node-modal__tag">Driver</span>
             <h2>CPRMAN</h2>
-            <p class="node-modal__lede">The PCM clock generator that drives I2S timing.</p>
-            <p><code>cprman_pcm_clock_enable(hz)</code> computes a 12-bit-integer + 12-bit-fraction (DIVI.DIVF) divisor from the fixed 19.2&nbsp;MHz crystal oscillator using fixed-point math (no FPU), then writes it through the <code>CM_PASSWORD</code>-gated CTL/DIV registers. The oscillator was chosen over the lower-jitter <code>PLLD_PER</code> because there's no way to query what <code>PLLD_PER</code> is actually running at &mdash; the oscillator is fixed and always exactly 19.2&nbsp;MHz. <code>cprman_pcm_clock_status()</code> reads back the divisor register for debugging; it can confirm the value latched, but not that PCM_CLK is actually toggling at that rate (see the I2S page).</p>
+            <p class="node-modal__lede">Peripheral clock source for I2C, UART, and I2S.</p>
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
@@ -1542,9 +1167,11 @@ session, unless you're specifically testing watchdog behavior.
         <div class="node-modal__inner" style="--tier-hue:#1E3A5F;">
             <span class="node-modal__tag">Base Kernel</span>
             <h2>Scheduler</h2>
-            <p class="node-modal__lede">A 6-level priority, round-robin scheduler — one fully independent instance per core.</p>
+            <p class="node-modal__lede">A 6-level priority, round-robin scheduler, with one instance per core.</p>
             <h3>Overview</h3>
-            <p>See the Startup, Scheduler, and Context Switching sections earlier on this page for the full walkthrough of ready lists, the blocked list, and the IRQ-driven context switch. The short version: each core owns its own <code>scheduler_init()</code> call, its own ready/blocked lists, its own idle task, and its own <code>Spinlock</code> — a task's <code>core_id</code> never changes once created; there's no task migration.</p>
+            <p>Each core owns its own <code>scheduler_init()</code> call, its own ready/blocked lists, its own idle task, and its own <code>Spinlock</code> scheduler lock. The current implemention is based on a BMP (bound multiprocess) model, so each task is bound to a core. <code>core_id</code> never changes once created.</p>
+
+            <h3>SchedulerCore struct, one owned per core:</h3>
 <pre>
 typedef struct {
   List               ready_list[NUM_TASK_PRIORITIES]; // one per priority level
@@ -1559,18 +1186,14 @@ typedef struct {
 
 static SchedulerCore g_cores[COMPANION_CORE_MAX_CORES];  // one per core, indexed by core_id
 </pre>
-            <p>"Blocking" in this kernel is a busy-wait, not a true block — <code>mutex_lock()</code>, <code>semaphore_take()</code>, and <code>task_delay_ms()</code> all spin on the task's own <code>current_state</code> field, on its own stack; the only thing that ever flips that state is the 1&nbsp;kHz timer ISR or another task's explicit wake call. The stack-watermark check inside <code>scheduler_switch_context()</code> is deliberately fatal rather than recoverable: if a task's watermark byte doesn't match on a context switch, the scheduler spins forever right there instead of trying to continue, so a JTAG session can inspect <code>task_id</code> and <code>stack_base</code> at the exact instant of the overflow.</p>
-            <p>Mutex and semaphore both carry their own lock separate from any core's scheduler lock (see those pages), and there's a strict ordering rule for code that holds both:</p>
-<pre>
-Correct order (what mutex_lock()/semaphore_take() do):
-  1. acquire the Semaphore's/Mutex's own lock
-  2. acquire scheduler_lock(core_id)          <- inner
-
-If a call site ever reversed that order:
-  Core 0: holds scheduler_lock(0), waits for mtx.lock
-  Core 1: holds mtx.lock,          waits for scheduler_lock(0)
-  -> neither can proceed
-</pre>
+<h3>Task States</h3>            
+<p>The scheduler is responsible for transitioning tasks between READY, RUNNING, and BLOCKED. Calling <code>mutex_lock()</code>, <code>semaphore_take()</code>, or <code>task_delay_ms()</code> pulls the task off its priority's ready list, drops it onto the <code>blocked_task_list</code> sorted by <code>wakeup_time</code>.</p>
+            <img src="project10\scheduler\task_lists.png" alt="", width="90%">
+            
+            <h3>Scheduler Systick execution</h3>
+            <p><code>scheduler_switch_context()</code> runs on every 1&nbsp;kHz tick and executes the round robin algorithm. Starting from the highest priority level and working down, the scheduler picks the first non-empty ready list and runs whichever task <code>list-&gt;index</code> currently points at. Several tasks sharing a priority rotate.</p>
+            <img src="project10\scheduler\systick_execution.png" alt="", width="80%">
+            
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
@@ -1600,10 +1223,13 @@ If a call site ever reversed that order:
         <div class="node-modal__inner" style="--tier-hue:#1E3A5F;">
             <span class="node-modal__tag">Base Kernel</span>
             <h2>Tasks</h2>
-            <p class="node-modal__lede"><code>task_create()</code> — the one function that turns a plain C function into a schedulable unit of execution.</p>
+            <p class="node-modal__lede">Units of execution defined by the system.</p>
             <h3>Overview</h3>
-            <p><code>task_create()</code> allocates a <code>TaskControlBlock</code> from a fixed per-core pool (16 slots per core, <code>MAX_NUM_TASKS</code>) and a stack from the kernel heap, fills the stack with a watermark byte, hand-builds a fake initial exception frame, and adds the task straight onto its core's ready list. <code>task_types.h</code> — the header defining <code>TaskControlBlock</code>, the intrusive <code>List</code>/<code>ListItem</code> types, priority levels, and task states — has no <code>.c</code> file of its own; it's the shared vocabulary <code>task.c</code> and <code>scheduler.c</code> both operate on, which is why this page treats "Tasks" as one component covering both.</p>
-<pre>
+            <p><code>task_create()</code> allocates a <code>TaskControlBlock</code> from a fixed per-core pool (16 slots per core, <code>MAX_NUM_TASKS</code>) and a stack from the kernel heap, fills the stack with a watermark byte, and adds the task to its core's ready list.</p>
+
+<h3>TaskControlBlock struct</h3>
+<p>Each task is identified by a TCB struct, which keeps track of priority, stack location, task state, and tracks if the task is part of a ready or blocked list.</p>
+            <pre>
 struct TaskControlBlock {
   volatile StackType_t *current_sp;  // live SP, saved/restored on every switch
   StackType_t          *stack_high;  // top of allocated stack (initial SP)
@@ -1625,26 +1251,35 @@ struct TaskControlBlock {
   TaskPriorityLevel      base_priority;    // pre-boost priority
   uint32_t               mutexes_held;     // inheritance-enabled mutexes held
 };
-</pre>
-            <p><code>task_init_stack()</code> builds a task's very first stack frame to look exactly like a context switch already happened to it:</p>
-<pre>
-stack_high  ┌───────────────────────────┐
-            │ SPSR = 0x00000013         │  SVC mode, IRQs enabled
-            ├───────────────────────────┤
-            │ PC   = task_function      │  entry point
-            ├───────────────────────────┤
-            │ LR   = task_exit_trap     │  catches a task that returns
-            ├───────────────────────────┤
-            │ R12                       │
-            │ ...                       │  all zero
-            │ R1                        │
-            ├───────────────────────────┤
-current_sp  │ R0   = task_params        │  first argument
-            └───────────────────────────┘
 
-Identical layout to what _irq_handler saves on every real context
-switch — a task's first run is indistinguishable from resuming a
-task that was already running.
+</pre>
+<h3>Task states</h3>
+<p>Tasks transition between three main states:</p>
+<img src="project10\task\task_lifecycle.png" alt="", width="80%">
+<h3>Task Stack:</h3>
+            <p><code>task_init_stack()</code> builds a task's very first stack frame, which is essential to context switching.</p>
+            <img src="project10\task\task_stack.png" alt="", width="60%">
+            <h3>Creating a task</h3>
+            <p>A task function takes one <code>void *</code> parameter and, typically never return. <code>task_exit_trap()</code> exists specifically to catch one that does.</p>
+<pre>
+static TaskControlBlock *blink_tcb = NULL;
+
+static void blink_task(void *params)
+{
+  (void)params;
+  while (1) {
+    gpio_on(LED_PIN);
+    task_delay_ms(500);
+    gpio_off(LED_PIN);
+    task_delay_ms(500);
+  }
+}
+
+// after scheduler_init(), before scheduler_start():
+StatusCode ret = task_create(blink_task, 256, TASK_PRIORITY_2, NULL, "blink", &blink_tcb);
+if (ret != E_OK) {
+  uart_printf("task_create failed: %d\r\n", ret);
+}
 </pre>
             <h3>API</h3>
             <table>
@@ -1662,7 +1297,7 @@ task that was already running.
         <div class="node-modal__inner" style="--tier-hue:#1E3A5F;">
             <span class="node-modal__tag">Base Kernel</span>
             <h2>Heap</h2>
-            <p class="node-modal__lede">A 256&nbsp;KB bump allocator — the entire dynamic memory story for this kernel.</p>
+            <p class="node-modal__lede">A 256&nbsp;KB bump allocator to manage dynamic memory in the kernel. Access is guarded by a spinlock.</p>
             <h3>Overview</h3>
 <pre>
 static uint8_t   heap[HEAP_SIZE_BYTES];   // 256 KB, HEAP_SIZE_BYTES = 262144
@@ -1681,7 +1316,6 @@ void *heap_malloc(uint32_t size)
   return block_start;
 }
 </pre>
-            <p>No free-list, no fragmentation handling, no <code>free()</code> at all &mdash; every allocation happens at boot (task stacks, TCBs, fixed buffers) and lives for the life of the program, so there's nothing to reclaim. Callers like <code>task_create()</code> and <code>queue_init()</code> check the <code>NULL</code> return explicitly.</p>
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
@@ -1699,42 +1333,70 @@ void *heap_malloc(uint32_t size)
         <div class="node-modal__inner" style="--tier-hue:#6B4B6E;">
             <span class="node-modal__tag">Multicore</span>
             <h2>Companion Core</h2>
-            <p class="node-modal__lede">Releases cores 1&ndash;3 from their boot-time parking loop into independent RTOS instances — and recovers them across a software reboot without a power cycle.</p>
+            <p class="node-modal__lede">Releases cores 1&ndash;3 from their boot-time parking loop into independent RTOS instances.</p>
             <h3>Overview</h3>
-            <p><code>companion_core_start(core_id, entry)</code> hands a secondary core a bare function pointer over a fixed cross-image mailbox address and wakes it with an SEV; <code>companion_core_id()</code> reads the calling core's own id straight off MPIDR. This module itself is AMP, not SMP — there's no shared ready list or task migration here. What a released core actually does with that entry point is run its own complete, independent <code>scheduler_init()</code>/<code>task_create()</code>/<code>scheduler_start()</code> sequence: a second full instance of everything in the Base of RTOS / Kernel tier above, on its own core.</p>
-<pre>
+            <p><code>companion_core_start(core_id, entry)</code> hands a secondary core a bare function pointer and wakes it with a SEV.</p>
+
+            <h3>CompanionCoreContext struct</h3>
+            <p>The CompanionCoreContext struct is mainly used to manage the multicore watchdog feature</p>
+            <pre>
 typedef struct {
   volatile uint32_t expected_mask;          // which cores should report in
   volatile uint8_t  core_kicked[COMPANION_CORE_MAX_CORES]; // per-core kick flags
 } CompanionCoreContext;
 </pre>
-            <p>Shared bookkeeping, owned by the caller and linked in via <code>companion_core_init()</code> — <code>expected_mask</code> gets a bit set for every core released through <code>companion_core_start()</code>, and Watchdog's multicore mode uses <code>core_kicked</code> to track which of those cores has reported in (see the Watchdog page).</p>
+
+<h3>Companion core startup sequence:</h3>
+<img src="project10\multicore\multicore_startup.png" alt="", width="80%">
+<p> What a released core actually does with that entry point is run its own complete, independent <code>scheduler_init()</code>/<code>task_create()</code>/<code>scheduler_start()</code> sequence: a second full instance of everything in the Base of RTOS / Kernel tier above.</p>
+            <h3>A companion core's entry function</h3>
 <pre>
-Core 0 (conductor)                    Core 1 (companion)
-   │  write entry fn ptr                    │
-   │──────► mailbox[1] ────────────────────►│  parked, waiting on SEV
-   │  sev                                   │
-   │                                        ▼
-   │                              runs own scheduler_init()
-   │                              /task_create()/scheduler_start()
-   │                              — a second full kernel instance
-   │
-   ── DFU soft reset (core 0 only — a jump, not a hardware reset) ──
-   │
-   │  companion_core_reset_active()
-   │──────► ARM Local mailbox 0 IPI ────────►│  (not a GIC SGI — see
-   │        to every live core               │   the GIC page for why
-   │                                        │  one can't be delivered here)
-   │                                        │  _irq_handler special-cases
-   │                                        │  this IPI → diverts to
-   │                                        │  _companion_core_park$
-   │                                        │  (dedicated 2 KB park stack)
-   │                                        ▼
-   │                              back in the mailbox park loop,
-   │                              ready for the next companion_core_start()
+static volatile uint32_t core1_clk_freq;
+static volatile uint64_t core1_tick_count = 0;
+
+static void led_task(void *params)
+{
+  (void)params;
+  while (1) {
+    gpio_on(LED_PIN);
+    task_delay_ms(500);
+    gpio_off(LED_PIN);
+    task_delay_ms(500);
+  }
+}
+
+static void core1_kmain(void)
+{
+  gpio_set_function(LED_PIN, GPIO_FUNC_OUTPUT);
+
+  gic_percore_init();                              // this core's own CPU interface
+  gentimer_init(&core1_clk_freq, hz);               // this core's own tick source
+  scheduler_init(1U, &core1_clk_freq, hz, &core1_tick_count);
+
+  TaskControlBlock *tcb;
+  task_create(led_task, 2048, TASK_PRIORITY_1, NULL, "led", &tcb);
+
+  __asm__ volatile ("cpsie i" ::: "memory");        // this core's own IRQs
+  scheduler_start();                                // never returns
+}
 </pre>
-            <p>The harder problem here wasn't releasing a core — it was recovering one. A DFU-triggered software reboot only resets core 0, so a companion core that had already been released just keeps running its old entry function straight through the "reboot" — it's never sitting in the mailbox park loop again, and the only recovery used to be a physical power cycle. The fix uses the one mechanism that can redirect a core that's actively running, without a hardware reset: <code>companion_core_reset_active()</code> sends every live core an ARM Local mailbox 0 IPI, and the assembly <code>_irq_handler</code> special-cases it to divert straight into a dedicated park routine instead of returning to whatever the core was doing. That routine originally reused the abandoned task's own stack, which produced crashes where <code>TASK_WATERMARK</code> filler bytes started showing up as return addresses — the park code ran far enough into a stack's watermarked tail that it began popping watermark bytes as if they were saved registers. It now runs on a dedicated 2&nbsp;KB per-core park stack instead.</p>
-            <p>Being direct about status, since this is asymmetric multicore work and not everything here has been proven on a board: the release-and-reparking mechanism above, and the independent per-core scheduler instances it launches into, are implemented in the current source. But the project's own multicore plan docs still mark the very first milestone — confirming secondaries actually reach <code>_start</code> rather than being held by the boot stub — as build-verified only, not yet validated on hardware.</p>
+            <h3>Core 0 releasing it</h3>
+<pre>
+void kmain(void)
+{
+  ...
+  gic_distributor_init();   // global — must happen before any core is released
+  gic_percore_init();       // core 0's own PPI30 + CPU-interface enable
+  gentimer_init(&clk_freq, hz);
+
+  if (companion_core_start(1U, core1_kmain) == E_OK) {
+    uart_print("core 0: released core 1\r\n");
+  }
+
+  __asm__ volatile ("cpsie i" ::: "memory");
+  scheduler_start();
+}
+</pre>
             <h3>API</h3>
             <table>
                 <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
