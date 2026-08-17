@@ -425,6 +425,129 @@
             <p>An RTOS with no display is hard to introspect by staring at a UART console, so I built a companion desktop app: a Rust/egui GUI that connects to a running board over its own dedicated telemetry UART channel. It decodes a small framed wire protocol into live scheduler and task state.</p>
             <p>The client renders scheduler dynamics and per-core status in real time, tracks which tasks are currently blocked and on what, and includes its own DFU panel that drives the exact same firmware-update protocol the bootloader implements, so I can push a full update from the host GUI instead of a separate command-line tool.</p>
 
+            <h3>Task Timing breakdown, ready and blocked lists, timing diagram</h3>
+            <img src="project10\rtos_client_core0.gif" alt="", width="90%">
+
+            <h3>Sample: Companion cores alternating</h3>
+            <img src="project10\rtos_client_comp_cores.gif" alt="", width="90%">
+
+            <h3>Synchronization primitives viewer</h3>
+            <img src="project10\rtos_client_syncs.gif" alt="", width="90%">
+
+            <h3>Broadcast protocol</h3>
+            <p>The telemetry link is TX-only and one-way: the device streams framed packets out over a dedicated PL011 channel (<code>UART_CHANNEL_TELEMETRY</code>, TXD5 on GPIO12/<code>ALT4</code>, no RX pin) at 921600 baud, and nothing on the device ever blocks waiting for the host to acknowledge anything — there's no ACK/NACK in the protocol at all. Every packet uses the same frame, defined in <code>source/telemetry/telemetry.h</code> and built by <code>telemetry_send_framed()</code> in <code>source/telemetry/telemetry_frame.c</code>: <code>[0xA5 magic][type:1][seq:1][len_msb:1][len_lsb:1][payload:len][crc32:4 LE][0x5A trailer]</code>, with the CRC32 covering everything from the magic byte through the payload. <code>seq</code> wraps at 256 per packet type, which is what lets the host notice a dropped or corrupted frame without any retransmit scheme.</p>
+
+            <svg viewBox="0 0 900 195" width="90%" style="display:block; margin:8px auto 24px; max-width:900px; font-family: var(--font-primary);" role="img" aria-label="Telemetry frame byte layout: magic, type, seq, len_msb, len_lsb, payload, crc32, trailer">
+                <text x="450" y="22" text-anchor="middle" style="font-size:12px; fill:var(--color-muted); letter-spacing:0.3px;">one telemetry_send_framed() frame — source/telemetry/telemetry_frame.c</text>
+
+                <!-- MAGIC -->
+                <rect x="20" y="42" width="78" height="60" rx="6" style="fill:rgba(30,58,95,0.08); stroke:var(--color-accent); stroke-width:1.5;"/>
+                <text x="59" y="68" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">MAGIC</text>
+                <text x="59" y="86" text-anchor="middle" style="font-size:11px; fill:var(--color-muted); font-family:ui-monospace,Consolas,monospace;">0xA5</text>
+
+                <!-- TYPE -->
+                <rect x="102" y="42" width="78" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="141" y="68" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">TYPE</text>
+                <text x="141" y="86" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">1 byte</text>
+
+                <!-- SEQ -->
+                <rect x="184" y="42" width="78" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="223" y="68" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">SEQ</text>
+                <text x="223" y="86" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">wraps @256</text>
+
+                <!-- LEN_MSB -->
+                <rect x="266" y="42" width="88" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="310" y="68" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">LEN_MSB</text>
+                <text x="310" y="86" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">1 byte</text>
+
+                <!-- LEN_LSB -->
+                <rect x="358" y="42" width="88" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="402" y="68" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">LEN_LSB</text>
+                <text x="402" y="86" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">1 byte</text>
+
+                <!-- PAYLOAD -->
+                <rect x="450" y="42" width="196" height="60" rx="6" style="fill:var(--color-bg); stroke:var(--color-muted); stroke-width:1.5; stroke-dasharray:5,4;"/>
+                <text x="548" y="68" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">PAYLOAD</text>
+                <text x="548" y="86" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">N bytes, per packet type</text>
+
+                <!-- CRC32 -->
+                <rect x="650" y="42" width="128" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="714" y="68" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">CRC32</text>
+                <text x="714" y="86" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">4 bytes, LE</text>
+
+                <!-- TRAILER -->
+                <rect x="782" y="42" width="78" height="60" rx="6" style="fill:rgba(30,58,95,0.08); stroke:var(--color-accent); stroke-width:1.5;"/>
+                <text x="821" y="68" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">TRAILER</text>
+                <text x="821" y="86" text-anchor="middle" style="font-size:11px; fill:var(--color-muted); font-family:ui-monospace,Consolas,monospace;">0x5A</text>
+
+                <!-- CRC coverage bracket: MAGIC start (20) through PAYLOAD end (646) -->
+                <path d="M 20 116 L 20 124 L 646 124 L 646 116" style="fill:none; stroke:var(--color-accent); stroke-width:1.5;"/>
+                <text x="333" y="142" text-anchor="middle" style="font-size:12px; fill:var(--color-accent);">CRC32 covers magic → end of payload</text>
+            </svg>
+
+            <p>What the device actually decides to broadcast is deliberately raw. It's a ~10&nbsp;Hz heartbeat counter, one <code>PKT_TASK_CREATED</code> per task (id, core, priority, name) fired from <code>task_create()</code>, one <code>PKT_TICK_STATE</code> per core per scheduler tick (queued into a per-core ring buffer by <code>telemetry_report_tick_state()</code> and drained by <code>telemetry_publisher_task</code>, so the tick handler itself never touches the UART), plus block/unblock, sync-object-created, and mutex-ownership-changed events as they happen. The full packet layout table and the reasoning for exactly these hook points live in <code>source/telemetry/docs.md</code>. Notably absent from the wire: per-task CPU time, ready/blocked lists, or anything that looks like the timing diagram above — the device only ever reports raw ids, states, and counters as they change.</p>
+            <p>All of that reconstruction is the client's job. The <code>telemetry-protocol</code> crate (<code>client/telemetry-protocol/src/packet.rs</code>) mirrors the device-side enums byte-for-byte and decodes each validated frame into a typed <code>Packet</code>, and <code>telemetry-gui</code> (<code>scheduler_dynamics.rs</code>, <code>time_breakdown.rs</code>, <code>blocked_tracker.rs</code>, <code>sync_view.rs</code>) turns that raw event stream into the ready/blocked lists, per-task timing breakdown, and sync-ownership graph shown above — every bit of derived state in the GUI is something the firmware never had to compute.</p>
+
+            <svg viewBox="0 0 900 660" width="90%" style="display:block; margin:8px auto 24px; max-width:900px; font-family: var(--font-primary);" role="img" aria-label="Broadcast pipeline from device-side telemetry hooks over UART5 to the host telemetry client">
+                <text x="230" y="24" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text); letter-spacing:0.3px;">DEVICE</text>
+                <text x="730" y="24" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text); letter-spacing:0.3px;">HOST</text>
+
+                <defs>
+                    <marker id="bp-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" style="fill:var(--color-muted);"/>
+                    </marker>
+                    <marker id="bp-arrow-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" style="fill:var(--color-accent);"/>
+                    </marker>
+                </defs>
+
+                <!-- L1 -->
+                <rect x="20" y="50" width="420" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="230" y="74" text-anchor="middle" style="font-size:14px; font-weight:600; fill:var(--color-text);">Scheduler tick + task events</text>
+                <text x="230" y="93" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">task_create · block/unblock · mutex &amp; sync — every core</text>
+                <line x1="230" y1="110" x2="230" y2="146" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#bp-arrow)"/>
+
+                <!-- L2 -->
+                <rect x="20" y="150" width="420" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="230" y="174" text-anchor="middle" style="font-size:14px; font-weight:600; fill:var(--color-text);">Per-core ring buffers (depth 8)</text>
+                <text x="230" y="193" text-anchor="middle" style="font-size:11px; fill:var(--color-muted); font-family:ui-monospace,Consolas,monospace;">telemetry_report_tick_state()</text>
+                <line x1="230" y1="210" x2="230" y2="246" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#bp-arrow)"/>
+
+                <!-- L3 -->
+                <rect x="20" y="250" width="420" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="230" y="274" text-anchor="middle" style="font-size:14px; font-weight:600; fill:var(--color-text);">telemetry_publisher_task (core 3)</text>
+                <text x="230" y="293" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">drains every ring each loop + ~10 Hz heartbeat</text>
+                <line x1="230" y1="310" x2="230" y2="346" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#bp-arrow)"/>
+
+                <!-- L4 -->
+                <rect x="20" y="350" width="420" height="60" rx="6" style="fill:rgba(30,58,95,0.08); stroke:var(--color-accent); stroke-width:1.5;"/>
+                <text x="230" y="374" text-anchor="middle" style="font-size:14px; font-weight:600; fill:var(--color-text); font-family:ui-monospace,Consolas,monospace;">telemetry_send_framed()</text>
+                <text x="230" y="393" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">→ UART5 TX · GPIO12/ALT4 · 921600 baud</text>
+
+                <!-- horizontal one-way link -->
+                <line x1="440" y1="380" x2="536" y2="380" style="stroke:var(--color-accent); stroke-width:2;" marker-end="url(#bp-arrow-accent)"/>
+                <text x="488" y="364" text-anchor="middle" style="font-size:11px; fill:var(--color-accent); font-weight:600;">one-way</text>
+                <text x="488" y="401" text-anchor="middle" style="font-size:10px; fill:var(--color-muted);">no ACK/NACK</text>
+
+                <!-- R1 -->
+                <rect x="540" y="350" width="340" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="710" y="374" text-anchor="middle" style="font-size:14px; font-weight:600; fill:var(--color-text);">UART5 RX</text>
+                <text x="710" y="393" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">host serial port</text>
+                <line x1="710" y1="410" x2="710" y2="446" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#bp-arrow)"/>
+
+                <!-- R2 -->
+                <rect x="540" y="450" width="340" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="710" y="474" text-anchor="middle" style="font-size:14px; font-weight:600; fill:var(--color-text); font-family:ui-monospace,Consolas,monospace;">decode_packet()</text>
+                <text x="710" y="493" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">telemetry-protocol / packet.rs</text>
+                <line x1="710" y1="510" x2="710" y2="546" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#bp-arrow)"/>
+
+                <!-- R3 -->
+                <rect x="540" y="550" width="340" height="90" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="710" y="576" text-anchor="middle" style="font-size:14px; font-weight:600; fill:var(--color-text);">telemetry-gui panels</text>
+                <text x="710" y="596" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">scheduler_dynamics · time_breakdown</text>
+                <text x="710" y="613" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">blocked_tracker · sync_view</text>
+            </svg>
+
         </div>
     </div>
 

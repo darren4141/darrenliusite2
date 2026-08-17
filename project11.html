@@ -66,55 +66,205 @@
             <h2>Bootloader and DFU</h2>
             <p>The bootloader image (boot7l.img) loads first and is responsible for validating and jumping to the kernel. On startup it checks the shared boot flags: if a firmware update was requested, it enters DFU mode; otherwise it validates the kernel CRC and jumps to 0x88400. The DFU protocol operates over UART and uses a simple framed packet format with a 32-bit CRC for error detection.</p>
 
-<pre>
-Bootloader Startup Flow
-──────────────────────────────────────────────────────────
-Power on → GPU loads boot7l.img at 0x8000
-        │
-        ▼
-boot_flags valid?
-        │
-    YES─┴─NO → initialize boot_flags (first boot)
-        │
-        ▼
-DFU requested? ──YES──► Enter DFU mode (wait for UART upload)
-        │                        │
-        NO                       │
-        │                        │
-        ▼                        │
-App CRC valid?                   │
-        │                        │
-    YES─┴─NO → Enter DFU mode   │
-        │          │             │
-        │          ▼             │
-        │     Receive firmware   │
-        │     over UART          │
-        │     Write to eMMC ◄────┘
-        │     Validate CRC
-        │          │
-        ▼          ▼
-boot_loadApp()   boot_loadApp()
- Read kernel from eMMC sector 4096
- Copy to 0x88400
-        │
-        ▼
-boot_jumpToApp()
- Disable interrupts
- Data/instruction barriers
- Branch to 0x88400 → kernel _start
+<h3>Bootloader startup flow</h3>
+            <svg viewBox="0 0 900 760" width="90%" style="display:block; margin:8px auto 24px; max-width:900px; font-family: var(--font-primary);" role="img" aria-label="Bootloader startup flowchart: init, A/B trial and watchdog-tolerance resolution, DFU decision, app load and jump">
+                <text x="450" y="20" text-anchor="middle" style="font-size:12px; fill:var(--color-muted);">source/samples/boot/bootloader/main.c — bootloader_init() + bootloader_execute()</text>
 
+                <defs>
+                    <marker id="bf-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" style="fill:var(--color-muted);"/>
+                    </marker>
+                    <marker id="bf-arrow-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" style="fill:var(--color-accent);"/>
+                    </marker>
+                </defs>
 
-DFU Packet Format (UART)
-──────────────────────────────────────────────────────────
-┌──────┬──────────┬──────────────────┬────────┐
-│ CMD  │   LEN    │   DATA (≤256 B)  │  CRC32 │
-│ 1 B  │   2 B    │      N bytes     │  4 B   │
-└──────┴──────────┴──────────────────┴────────┘
+                <!-- S1 -->
+                <rect x="40" y="50" width="380" height="64" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="230" y="76" text-anchor="middle" style="font-size:14px; font-weight:600; fill:var(--color-text); font-family:ui-monospace,Consolas,monospace;">bootloader_init()</text>
+                <text x="230" y="96" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">jtag_gpio_init · boot_flags_init · emmc_init · wdt_meta_read()</text>
+                <line x1="230" y1="114" x2="230" y2="146" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#bf-arrow)"/>
 
-State machine: START → CMD → LENGTH → PAYLOAD → CRC → SUCCESS/ERROR
+                <!-- D1 -->
+                <rect x="40" y="150" width="380" height="64" rx="6" style="fill:var(--color-bg); stroke:var(--color-muted); stroke-width:1.5; stroke-dasharray:5,4;"/>
+                <text x="230" y="176" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">on-trial slot, attempts &#8805; 3?</text>
+                <text x="230" y="196" text-anchor="middle" style="font-size:10.5px; fill:var(--color-muted);">app_slot_trial &amp;&amp; trial_boot_count &#8805; APP_SLOT_TRIAL_MAX_ATTEMPTS (3)</text>
+                <line x1="230" y1="214" x2="230" y2="256" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#bf-arrow)"/>
+                <text x="246" y="235" style="font-size:11px; fill:var(--color-muted);">NO</text>
+                <line x1="420" y1="182" x2="516" y2="182" style="stroke:var(--color-accent); stroke-width:1.5;" marker-end="url(#bf-arrow-accent)"/>
+                <text x="468" y="172" text-anchor="middle" style="font-size:11px; fill:var(--color-accent); font-weight:600;">YES</text>
 
-Commands: REQ, START, DATA, FINISH, ABORT, GET_STATUS, RECOVER
-</pre>
+                <!-- B1 -->
+                <rect x="520" y="150" width="340" height="64" rx="6" style="fill:rgba(30,58,95,0.08); stroke:var(--color-accent); stroke-width:1.5;"/>
+                <text x="690" y="176" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">roll back trial slot</text>
+                <text x="690" y="196" text-anchor="middle" style="font-size:10.5px; fill:var(--color-muted);">active_app_slot = other slot; trial = 0 · BOOT_MS_TRIAL_ROLLBACK</text>
+                <path d="M 690 214 L 690 292 L 424 292" style="fill:none; stroke:var(--color-accent); stroke-width:1.5;" marker-end="url(#bf-arrow-accent)"/>
+
+                <!-- D2 -->
+                <rect x="40" y="260" width="380" height="64" rx="6" style="fill:var(--color-bg); stroke:var(--color-muted); stroke-width:1.5; stroke-dasharray:5,4;"/>
+                <text x="230" y="286" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">reset tolerance exceeded?</text>
+                <text x="230" y="306" text-anchor="middle" style="font-size:10.5px; fill:var(--color-muted);">wdt_reset_count &gt; wdt_reset_tolerance</text>
+                <line x1="230" y1="324" x2="230" y2="356" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#bf-arrow)"/>
+                <text x="246" y="345" style="font-size:11px; fill:var(--color-muted);">NO</text>
+                <line x1="420" y1="292" x2="516" y2="292" style="stroke:var(--color-accent); stroke-width:1.5;" marker-end="url(#bf-arrow-accent)"/>
+                <text x="468" y="282" text-anchor="middle" style="font-size:11px; fill:var(--color-accent); font-weight:600;">YES</text>
+
+                <!-- B2 -->
+                <rect x="520" y="260" width="340" height="64" rx="6" style="fill:rgba(30,58,95,0.08); stroke:var(--color-accent); stroke-width:1.5;"/>
+                <text x="690" y="284" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">apply reset policy</text>
+                <text x="690" y="301" text-anchor="middle" style="font-size:10px; fill:var(--color-muted);">FORCE_UPDATE &#8594; force DFU next check</text>
+                <text x="690" y="315" text-anchor="middle" style="font-size:10px; fill:var(--color-muted);">ROLLBACK &#8594; roll back to other slot</text>
+                <path d="M 690 324 L 690 392 L 424 392" style="fill:none; stroke:var(--color-accent); stroke-width:1.5;" marker-end="url(#bf-arrow-accent)"/>
+
+                <!-- S2 -->
+                <rect x="40" y="360" width="380" height="64" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="230" y="386" text-anchor="middle" style="font-size:14px; font-weight:600; fill:var(--color-text);">revalidate active slot</text>
+                <text x="230" y="406" text-anchor="middle" style="font-size:11px; fill:var(--color-muted); font-family:ui-monospace,Consolas,monospace;">boot_validate_app() &#8594; sets fw_crc_ok</text>
+                <line x1="230" y1="424" x2="230" y2="456" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#bf-arrow)"/>
+
+                <!-- D3 -->
+                <rect x="40" y="460" width="380" height="64" rx="6" style="fill:var(--color-bg); stroke:var(--color-muted); stroke-width:1.5; stroke-dasharray:5,4;"/>
+                <text x="230" y="486" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">DFU requested, or CRC invalid?</text>
+                <text x="230" y="506" text-anchor="middle" style="font-size:10.5px; fill:var(--color-muted);">boot_flags.dfu_requested == DFU_REQUEST || !fw_crc_ok</text>
+                <line x1="230" y1="524" x2="230" y2="564" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#bf-arrow)"/>
+                <text x="246" y="548" style="font-size:11px; fill:var(--color-muted);">NO</text>
+                <line x1="420" y1="492" x2="516" y2="492" style="stroke:var(--color-accent); stroke-width:1.5;" marker-end="url(#bf-arrow-accent)"/>
+                <text x="468" y="482" text-anchor="middle" style="font-size:11px; fill:var(--color-accent); font-weight:600;">YES</text>
+
+                <!-- B3 -->
+                <rect x="520" y="460" width="340" height="140" rx="6" style="fill:rgba(30,58,95,0.08); stroke:var(--color-accent); stroke-width:1.5;"/>
+                <text x="690" y="484" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text); font-family:ui-monospace,Consolas,monospace;">dfu_receive() over UART</text>
+                <text x="690" y="504" text-anchor="middle" style="font-size:10.5px; fill:var(--color-muted);">wait trigger key &#8594; CMD_START / CMD_START_SELF_UPDATE</text>
+                <text x="690" y="522" text-anchor="middle" style="font-size:10.5px; fill:var(--color-muted);">stream CMD_DATA, hashing image CRC32</text>
+                <text x="690" y="540" text-anchor="middle" style="font-size:10.5px; fill:var(--color-muted);">CMD_FINISH: CRC check &#8594; read-back validate &#8594; DFU marker check</text>
+                <text x="690" y="558" text-anchor="middle" style="font-size:10.5px; fill:var(--color-muted);">commit: flip active_app_slot, mark on-trial</text>
+                <path d="M 690 600 L 424 600" style="fill:none; stroke:var(--color-accent); stroke-width:1.5;" marker-end="url(#bf-arrow-accent)"/>
+                <path d="M 690 600 L 690 611" style="fill:none; stroke:var(--color-muted); stroke-width:1.5; stroke-dasharray:4,3;" marker-end="url(#bf-arrow)"/>
+
+                <!-- S3 -->
+                <rect x="40" y="568" width="380" height="64" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="230" y="594" text-anchor="middle" style="font-size:14px; font-weight:600; fill:var(--color-text); font-family:ui-monospace,Consolas,monospace;">boot_load_app()</text>
+                <text x="230" y="614" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">copy active slot from eMMC &#8594; 0x88400 (APP_START_ADDR)</text>
+                <line x1="230" y1="632" x2="230" y2="664" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#bf-arrow)"/>
+
+                <!-- S4 -->
+                <rect x="40" y="668" width="380" height="64" rx="6" style="fill:rgba(30,58,95,0.08); stroke:var(--color-accent); stroke-width:1.5;"/>
+                <text x="230" y="694" text-anchor="middle" style="font-size:14px; font-weight:600; fill:var(--color-text); font-family:ui-monospace,Consolas,monospace;">boot_jump_to_app()</text>
+                <text x="230" y="714" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">cpsid if · dsb/isb · branch to 0x88400 &#8594; kernel _start</text>
+
+                <!-- N1 -->
+                <rect x="520" y="611" width="340" height="66" rx="6" style="fill:var(--color-bg); stroke:var(--color-muted); stroke-width:1.5; stroke-dasharray:5,4;"/>
+                <text x="690" y="635" text-anchor="middle" style="font-size:12.5px; font-weight:600; fill:var(--color-text);">10 failed attempts &#8594;</text>
+                <text x="690" y="654" text-anchor="middle" style="font-size:10.5px; fill:var(--color-muted);">infinite DFU recovery loop · BOOT_MS_ALL_RETRIES_EXHAUSTED</text>
+            </svg>
+
+            <h3>DFU packet format</h3>
+            <svg viewBox="0 0 900 430" width="90%" style="display:block; margin:8px auto 24px; max-width:900px; font-family: var(--font-primary);" role="img" aria-label="DFU packet format: SOF, CMD, LEN, DATA, CRC, END, the receive state machine, and the command set">
+                <text x="450" y="20" text-anchor="middle" style="font-size:12px; fill:var(--color-muted);">source/boot/dfu_receive/dfu_receive.h — DFU_Packet, over the bootloader's UART0 (115200 baud)</text>
+
+                <defs>
+                    <marker id="pf-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" style="fill:var(--color-muted);"/>
+                    </marker>
+                </defs>
+
+                <!-- byte fields -->
+                <rect x="20" y="46" width="70" height="60" rx="6" style="fill:rgba(30,58,95,0.08); stroke:var(--color-accent); stroke-width:1.5;"/>
+                <text x="55" y="72" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">SOF</text>
+                <text x="55" y="90" text-anchor="middle" style="font-size:11px; fill:var(--color-muted); font-family:ui-monospace,Consolas,monospace;">0xAA</text>
+
+                <rect x="96" y="46" width="80" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="136" y="72" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">CMD</text>
+                <text x="136" y="90" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">1 byte</text>
+
+                <rect x="182" y="46" width="90" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="227" y="72" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">LEN</text>
+                <text x="227" y="90" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">2 bytes, BE</text>
+
+                <rect x="278" y="46" width="200" height="60" rx="6" style="fill:var(--color-bg); stroke:var(--color-muted); stroke-width:1.5; stroke-dasharray:5,4;"/>
+                <text x="378" y="72" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">DATA</text>
+                <text x="378" y="90" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">&#8804; 256 bytes, N = LEN</text>
+
+                <rect x="484" y="46" width="110" height="60" rx="6" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="539" y="72" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">CRC</text>
+                <text x="539" y="90" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">4 bytes, BE</text>
+
+                <rect x="600" y="46" width="70" height="60" rx="6" style="fill:rgba(30,58,95,0.08); stroke:var(--color-accent); stroke-width:1.5;"/>
+                <text x="635" y="72" text-anchor="middle" style="font-size:13px; font-weight:600; fill:var(--color-text);">END</text>
+                <text x="635" y="90" text-anchor="middle" style="font-size:11px; fill:var(--color-muted); font-family:ui-monospace,Consolas,monospace;">0xBB</text>
+
+                <text x="450" y="124" text-anchor="middle" style="font-size:11px; fill:var(--color-muted);">SOF/END are framing sentinels, not part of the DFU_Packet struct — a bad CMD or missing END resyncs on the next 0xAA</text>
+
+                <!-- state machine -->
+                <text x="20" y="146" style="font-size:12px; font-weight:600; fill:var(--color-text);">dfu_packet_receive() state machine</text>
+
+                <rect x="20" y="152" width="90" height="48" rx="5" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="65" y="181" text-anchor="middle" style="font-size:11.5px; fill:var(--color-text);">START</text>
+                <line x1="110" y1="176" x2="118" y2="176" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#pf-arrow)"/>
+
+                <rect x="120" y="152" width="90" height="48" rx="5" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="165" y="181" text-anchor="middle" style="font-size:11.5px; fill:var(--color-text);">CMD</text>
+                <line x1="210" y1="176" x2="218" y2="176" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#pf-arrow)"/>
+
+                <rect x="220" y="152" width="90" height="48" rx="5" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="265" y="181" text-anchor="middle" style="font-size:11.5px; fill:var(--color-text);">LENGTH</text>
+                <line x1="310" y1="176" x2="318" y2="176" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#pf-arrow)"/>
+
+                <rect x="320" y="152" width="100" height="48" rx="5" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="370" y="181" text-anchor="middle" style="font-size:11.5px; fill:var(--color-text);">PAYLOAD</text>
+                <line x1="420" y1="176" x2="428" y2="176" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#pf-arrow)"/>
+
+                <rect x="430" y="152" width="90" height="48" rx="5" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="475" y="181" text-anchor="middle" style="font-size:11.5px; fill:var(--color-text);">CRC</text>
+                <line x1="520" y1="176" x2="528" y2="176" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#pf-arrow)"/>
+
+                <rect x="530" y="152" width="90" height="48" rx="5" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="575" y="181" text-anchor="middle" style="font-size:11.5px; fill:var(--color-text);">END</text>
+                <line x1="620" y1="176" x2="628" y2="176" style="stroke:var(--color-muted); stroke-width:1.5;" marker-end="url(#pf-arrow)"/>
+
+                <rect x="630" y="152" width="110" height="48" rx="5" style="fill:rgba(30,58,95,0.08); stroke:var(--color-accent); stroke-width:1.5;"/>
+                <text x="685" y="181" text-anchor="middle" style="font-size:11.5px; font-weight:600; fill:var(--color-text);">SUCCESS</text>
+
+                <line x1="165" y1="200" x2="165" y2="223" style="stroke:var(--color-muted); stroke-width:1.5; stroke-dasharray:4,3;" marker-end="url(#pf-arrow)"/>
+                <text x="176" y="215" style="font-size:10px; fill:var(--color-muted);">invalid CMD</text>
+                <rect x="120" y="227" width="90" height="40" rx="5" style="fill:var(--color-bg); stroke:var(--color-muted); stroke-width:1.5; stroke-dasharray:5,4;"/>
+                <text x="165" y="252" text-anchor="middle" style="font-size:11px; fill:var(--color-text);">ERROR</text>
+                <path d="M 120 247 L 65 247 L 65 202" style="fill:none; stroke:var(--color-muted); stroke-width:1.5; stroke-dasharray:4,3;" marker-end="url(#pf-arrow)"/>
+
+                <!-- commands -->
+                <text x="20" y="296" style="font-size:12px; font-weight:600; fill:var(--color-text);">Commands (packet.CMD)</text>
+
+                <rect x="20" y="306" width="90" height="32" rx="16" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="65" y="327" text-anchor="middle" style="font-size:11px; fill:var(--color-text);">REQ · 0x01</text>
+
+                <rect x="120" y="306" width="90" height="32" rx="16" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="165" y="327" text-anchor="middle" style="font-size:11px; fill:var(--color-text);">START · 0x02</text>
+
+                <rect x="220" y="306" width="200" height="32" rx="16" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="320" y="327" text-anchor="middle" style="font-size:11px; fill:var(--color-text);">START_SELF_UPDATE · 0x03</text>
+
+                <rect x="430" y="306" width="90" height="32" rx="16" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="475" y="327" text-anchor="middle" style="font-size:11px; fill:var(--color-text);">DATA · 0x04</text>
+
+                <rect x="20" y="348" width="90" height="32" rx="16" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="65" y="369" text-anchor="middle" style="font-size:11px; fill:var(--color-text);">FINISH · 0x05</text>
+
+                <rect x="120" y="348" width="90" height="32" rx="16" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="165" y="369" text-anchor="middle" style="font-size:11px; fill:var(--color-text);">ABORT · 0x06</text>
+
+                <rect x="220" y="348" width="140" height="32" rx="16" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="290" y="369" text-anchor="middle" style="font-size:11px; fill:var(--color-text);">GET_STATUS · 0x07</text>
+
+                <rect x="370" y="348" width="100" height="32" rx="16" style="fill:var(--color-surface-alt); stroke:var(--color-border); stroke-width:1.5;"/>
+                <text x="420" y="369" text-anchor="middle" style="font-size:11px; fill:var(--color-text);">RECOVER · 0x08</text>
+
+                <text x="20" y="404" style="font-size:10.5px; fill:var(--color-muted);">Host sees a single ACK (0x06) or NACK (0x15) byte after CMD_START / CMD_DATA / CMD_FINISH — not a full framed packet.</text>
+            </svg>
+
+    <h3>DFU & startup process viewer on the RTOS client:</h3>
+    <p>DFU is supported through scripts and also via the rtos client GUI. Here's a demo of how the DFU looks from the GUI. Notice how the designated app slot changes after flashing a new app.</p>
+    <img src="project11\rtos_client_booting.gif" alt="", width="90%">
+
         </div>
     </div>
 </body>
