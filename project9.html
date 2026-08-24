@@ -91,31 +91,31 @@
                     <div id="bar-exm" class="pv-pipereg-bar" style="left:890px;"></div>
                     <div id="bar-mwb" class="pv-pipereg-bar" style="left:1165px;"></div>
 
-                    <div class="pv-port-label" style="left:195px; top:6px;">PC+4</div>
-                    <div class="pv-port-label" style="left:195px; top:300px;">Instruction</div>
+                    <div class="pv-port-label" style="left:215px; top:80px;">PC+4</div>
+                    <div class="pv-port-label" style="left:400px; top:350px;">Instruction</div>
 
                     <div id="box-pcmux" class="pv-box pv-box-mux pv-trap-r" style="left:70px; top:143px; width:50px; height:32px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">PC Sel</span></div>
                     <div id="box-pc" class="pv-box" style="left:130px; top:143px; width:50px; height:32px;">PC</div>
-                    <div id="box-const4" class="pv-box" style="left:95px; top:50px; width:24px; height:16px; font-size:10px; padding:2px;">4</div>
+                    <div id="box-const4" class="pv-box" style="left:95px; top:70px; width:24px; height:16px; font-size:10px; padding:2px;">4</div>
                     <div id="box-adder4" class="pv-box pv-trap-r" style="left:130px; top:73px; width:50px; height:30px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">Adder</span></div>
-                    <div id="box-imem" class="pv-box" style="left:190px; top:129px; width:140px; height:60px;">IMEM</div>
-                    <div class="pv-port-label" style="left:194px; top:143px;">addr</div>
-                    <div class="pv-port-label pv-port-label-r" style="left:290px; top:143px;">inst</div>
+                    <div id="box-imem" class="pv-box" style="left:200px; top:125px; width:110px; height:60px;">IMEM</div>
+                    <div class="pv-port-label" style="left:204px; top:151px;">addr</div>
+                    <div class="pv-port-label pv-port-label-r" style="left:283px; top:151px;">inst</div>
 
-                    <div id="box-regfile" class="pv-box pv-box-tall" style="left:380px; top:80px; width:170px; height:165px;">Reg File<span class="pv-box-sub">32 &times; 32-bit</span></div>
-                    <div class="pv-port-label" style="left:384px; top:91px;">dataD</div>
-                    <div class="pv-port-label" style="left:384px; top:111px;">addrD</div>
-                    <div class="pv-port-label" style="left:384px; top:151px;">addrA</div>
-                    <div class="pv-port-label" style="left:384px; top:191px;">addrB</div>
-                    <div class="pv-port-label pv-port-label-r" style="left:490px; top:151px;">dataA</div>
-                    <div class="pv-port-label pv-port-label-r" style="left:490px; top:191px;">dataB</div>
+                    <div id="box-regfile" class="pv-box pv-box-tall" style="left:400px; top:80px; width:140px; height:165px;">Reg File<span class="pv-box-sub">32 &times; 32-bit</span></div>
+                    <div class="pv-port-label" style="left:404px; top:88px;">dataD</div>
+                    <div class="pv-port-label" style="left:404px; top:109px;">addrD</div>
+                    <div class="pv-port-label" style="left:404px; top:144px;">addrA</div>
+                    <div class="pv-port-label" style="left:404px; top:188px;">addrB</div>
+                    <div class="pv-port-label pv-port-label-r" style="left:504px; top:148px;">dataA</div>
+                    <div class="pv-port-label pv-port-label-r" style="left:504px; top:188px;">dataB</div>
 
-                    <div id="box-bcomp" class="pv-box pv-trap-r" style="left:700px; top:73px; width:120px; height:32px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">Branch Comp</span></div>
-                    <div id="box-muxa" class="pv-box pv-box-mux pv-trap-r" style="left:700px; top:123px; width:55px; height:28px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">mux A</span></div>
-                    <div id="box-muxb" class="pv-box pv-box-mux pv-trap-r" style="left:700px; top:157px; width:55px; height:28px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">mux B</span></div>
-                    <div id="box-immgen" class="pv-box pv-trap-r" style="left:700px; top:203px; width:82px; height:30px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">Imm Gen</span></div>
-                    <div id="box-alu" class="pv-box pv-box-alu pv-trap-alu" style="left:790px; top:108px; width:85px; height:82px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,30 55,30 100,50 55,70 0,70 18,50" /></svg><span class="pv-trap-label">ALU</span></div>
-                    <div id="box-jump" class="pv-box pv-trap-r" style="left:790px; top:203px; width:85px; height:30px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">Jump Unit</span></div>
+                    <div id="box-bcomp" class="pv-box pv-trap-r" style="left:700px; top:60px; width:120px; height:32px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">Branch Comp</span></div>
+                    <div id="box-muxa" class="pv-box pv-box-mux pv-trap-r" style="left:690px; top:115px; width:55px; height:64px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">mux A</span></div>
+                    <div id="box-muxb" class="pv-box pv-box-mux pv-trap-r" style="left:690px; top:205px; width:55px; height:64px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">mux B</span></div>
+                    <div id="box-immgen" class="pv-box pv-trap-r" style="left:675px; top:320px; width:82px; height:30px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">Imm Gen</span></div>
+                    <div id="box-alu" class="pv-box pv-box-alu pv-trap-alu" style="left:770px; top:110px; width:85px; height:170px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,30 55,30 100,50 55,70 0,70 18,50" /></svg><span class="pv-trap-label">ALU</span></div>
+                    <div id="box-jump" class="pv-box pv-trap-r" style="left:775px; top:320px; width:85px; height:30px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">Jump Unit</span></div>
 
                     <!-- mux M / DMEM shifted only slightly (not the full cascade the
                          ID/EX/M columns to their left got) so the EX/M-bar-to-DMEM
@@ -123,33 +123,25 @@
                          separate wires that cross it (ALU result to addr, dataB to
                          mux M, mux M's output to DataW) to run at distinct x's instead
                          of nearly overlapping. DMEM itself is also wider. -->
-                    <div id="box-muxm" class="pv-box pv-box-mux pv-trap-r" style="left:960px; top:73px; width:55px; height:28px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">mux M</span></div>
-                    <div id="box-dmem" class="pv-box" style="left:960px; top:123px; width:195px; height:60px;">DMEM</div>
-                    <div class="pv-port-label" style="left:964px; top:126px;">addr</div>
-                    <div class="pv-port-label" style="left:964px; top:172px;">DataW</div>
-                    <div class="pv-port-label pv-port-label-r" style="left:1151px; top:145px;">DataR</div>
+                    <div id="box-muxm" class="pv-box pv-box-mux pv-trap-r" style="left:960px; top:70px; width:55px; height:28px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">mux M</span></div>
+                    <div id="box-dmem" class="pv-box" style="left:995px; top:120px; width:155px; height:60px;">DMEM</div>
+                    <div class="pv-port-label" style="left:1000px; top:133px;">addr</div>
+                    <div class="pv-port-label" style="left:1000px; top:158px;">DataW</div>
+                    <div class="pv-port-label pv-port-label-r" style="left:1115px; top:145px;">DataR</div>
 
-                    <div id="box-wbmux" class="pv-box pv-box-mux pv-trap-r" style="left:1330px; top:73px; width:55px; height:44px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">WB mux</span></div>
-                    <div class="pv-port-label" style="left:1188px; top:81px;">2 PC+4</div>
-                    <div class="pv-port-label" style="left:1188px; top:93px;">1 ALU</div>
-                    <div class="pv-port-label" style="left:1188px; top:105px;">0 DataR</div>
+                    <div id="box-wbmux" class="pv-box pv-box-mux pv-trap-r" style="left:1330px; top:85px; width:55px; height:44px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">WB mux</span></div>
+                    <div class="pv-port-label" style="left:1270px; top:82px;">2 PC+4</div>
+                    <div class="pv-port-label" style="left:1200px; top:93px;">1 ALU</div>
+                    <div class="pv-port-label" style="left:1270px; top:117px;">0 DataR</div>
 
-                    <!-- colored instruction labels: sit clear of the wires/boxes, below
-                         the main datapath, directly under the bar they belong to -->
+                    <!-- pipeline register names: the instruction each one currently
+                         holds is already legible from the wire color alone (matched
+                         against the program legend above), so these are name-only. -->
                     <div class="pv-pipereg-label" style="left:310px; top:253px;">IF/ID</div>
-                    <div id="pv-if-card" class="pv-card" style="left:325px; top:267px; width:90px;"></div>
-
                     <div class="pv-pipereg-label" style="left:545px; top:253px;">ID/EX</div>
-                    <div id="pv-id-card" class="pv-card" style="left:515px; top:267px; width:90px;"></div>
-
                     <div class="pv-pipereg-label" style="left:920px; top:253px;">EX/M</div>
-                    <div id="pv-ex-card" class="pv-card" style="left:890px; top:267px; width:90px;"></div>
-
                     <div class="pv-pipereg-label" style="left:1185px; top:253px;">M/WB</div>
-                    <div id="pv-m-card" class="pv-card" style="left:1155px; top:267px; width:90px;"></div>
-
                     <div class="pv-pipereg-label" style="left:1445px; top:253px;">Writeback</div>
-                    <div id="pv-wb-card" class="pv-card" style="left:1430px; top:267px; width:110px;"></div>
 
                     <!-- hazard control band -->
                     <div class="pv-hazard-band">
@@ -185,9 +177,9 @@
                            feeding around from PC's own top since PC sits directly
                            under the adder rather than beside it, and the raw constant
                            4 above it. -->
-                      <path class="pv-wire" d="M 155,143 L 155,120 L 125,120 L 125,96 L 130,96" />
-                      <path class="pv-wire" d="M 119,58 L 125,58 L 125,80 L 130,80" />
-                      <path class="pv-wire" d="M 180,159 L 190,159" />
+                      <path class="pv-wire" d="M 185,160 L 185,120 L 125,120 L 125,96 L 130,96" />
+                      <path class="pv-wire" d="M 115,80 L 125,80 L 125,80 L 130,80" />
+                      <path class="pv-wire" d="M 180,159 L 200,159" />
                       <!-- adder's output exits its narrow right edge and fans out: one
                            branch feeds PC Sel as the default next-PC candidate, the
                            other becomes the PC+4 propagation lane above. Wraps around
@@ -195,40 +187,45 @@
                            the two redirect loops' own entries at y=155/170, so all
                            three candidate wires read as separate left-edge inputs
                            instead of one guessing at the top. -->
-                      <path class="pv-wire" d="M 180,88 L 180,125 L 40,125 L 40,150 L 70,150" />
-                      <path class="pv-wire" data-stage="if" d="M 330,159 L 358,159" />
-                      <path class="pv-wire" data-stage="if" d="M 155,143 L 155,107 L 358,107 L 358,115" />
+                      <path class="pv-wire" d="M 210,88 L 210,15 L 50,15 L 50,150 L 70,150" />
+                      <path class="pv-wire" data-stage="if" d="M 310,159 L 358,159" />
+                      <path class="pv-wire" data-stage="if" d="M 185,160 L 185,120 L 355,120 L 358,120 L 358,65" />
+                      <!-- PC's relay continues across ID, then drops into mux A's real
+                           left-edge input above the other three (dataA/MX-fwd/WX-fwd) --
+                           the ASel=1 path in the real RTL (mux_821 u_muxa .in001(pc_ex_reg)),
+                           used for AUIPC-style ALU-A operands. -->
+                      <path class="pv-wire" data-stage="id" d="M 358,65 L 578,65" />
+                      <path class="pv-wire" data-stage="ex" d="M 578,65 L 578,140 L 690,140" />
                       <!-- inst splits into addrA and addrB right where it crosses the
                            IF/ID bar -- same trunk-and-branch convention as Reg File's
                            dataA/dataB output below, applied on the read-address side too. -->
-                      <path class="pv-wire" data-stage="id" d="M 340,159 L 373,159 L 373,155 L 380,155" />
-                      <path class="pv-wire" data-stage="id" d="M 340,159 L 373,159 L 373,195 L 380,195" />
+                      <path class="pv-wire" data-stage="id" d="M 340,159 L 365,159 L 365,150 L 400,150" />
+                      <path class="pv-wire" data-stage="id" d="M 340,159 L 365,159 L 365,195 L 400,195" />
                       <!-- dataA and dataB each travel as one clean trunk line out of Reg File,
                            branching in a T only right where they actually enter a destination --
                            easier to trace by eye than four separate near-parallel diagonals. This
                            gap (ID/EX bar to the EX column) is deliberately wide so the trunks,
                            branches, and the forwarding-highlight lines below all have room to
                            run in parallel without bunching into each other. -->
-                      <path class="pv-wire" data-stage="ex" d="M 550,155 L 615,155 L 615,83 L 700,83" />
-                      <path class="pv-wire" data-stage="ex" d="M 550,155 L 615,155 L 615,137 L 700,137" />
-                      <path class="pv-wire" data-stage="ex" d="M 550,195 L 635,195 L 635,97 L 700,97" />
-                      <path class="pv-wire" data-stage="ex" d="M 550,195 L 635,195 L 635,165 L 700,165" />
+                      <path class="pv-wire" data-stage="ex" d="M 540,155 L 595,155 L 595,70 L 700,70" />
+                      <path class="pv-wire" data-stage="ex" d="M 540,155 L 595,155 L 595,155 L 690,155" />
+                      <path class="pv-wire" data-stage="ex" d="M 540,195 L 610,195 L 610,80 L 700,80" />
+                      <path class="pv-wire" data-stage="ex" d="M 540,195 L 610,195 L 610,215 L 690,215" />
                       <!-- imm gen's output exits its own narrow right edge and enters
                            mux B's front-left face, stacked below where dataB enters --
                            two distinct inputs on the same (real) input side, matching
                            how every other mux in this diagram is wired. -->
-                      <path class="pv-wire" data-stage="ex" d="M 782,218 L 782,240 L 685,240 L 685,180 L 700,180" />
+                      <path class="pv-wire" data-stage="ex" d="M 765,335 L 765,305 L 675,305 L 675,260 L 690,260" />
+                      <path class="pv-wire" data-stage="ex" d="M 765,335 L 755,335" />
                       <!-- mux A and mux B each drive one of the ALU's two real input
-                           points -- at the 30%/70% height marks, matching the polygon's
-                           own notches. A small round dot marks each entry point itself,
-                           since a fractional height on a small shape is hard to
-                           distinguish from "near the edge" without one. -->
-                      <path class="pv-wire" data-stage="ex" d="M 755,137 L 775,137 L 775,133 L 790,133" />
-                      <path class="pv-wire pv-port-dot" data-stage="ex" d="M 790,133 L 790.1,133" />
-                      <path class="pv-wire" data-stage="ex" d="M 755,171 L 775,171 L 775,165 L 790,165" />
-                      <path class="pv-wire pv-port-dot" data-stage="ex" d="M 790,165 L 790.1,165" />
-                      <path class="pv-wire" data-stage="ex" d="M 875,149 L 890,149" />
-                      <path class="pv-wire" data-stage="ex" d="M 578,195 L 578,245 L 908,245" />
+                           points, at the 30%/70% height marks matching the polygon's
+                           own notches. -->
+                      <path class="pv-wire" data-stage="ex" d="M 745,145 L 760,145 L 760,170 L 775,170" />
+                      <path class="pv-wire" data-stage="ex" d="M 745,240 L 760,240" />
+                      <path class="pv-wire" data-stage="ex" d="M 760,240 L 760,215" />
+                      <path class="pv-wire" data-stage="ex" d="M 760,215 L 775,215" />
+                      <path class="pv-wire" data-stage="ex" d="M 855,195 L 905,195" />
+                      <path class="pv-wire" data-stage="ex" d="M 595,195 L 595,290 L 908,290" />
                       <!-- DMEM's addr comes from the ALU result (base + offset); its
                            DataW comes from dataB (the store's source register), routed
                            through mux M which can substitute a freshly-forwarded value
@@ -236,10 +233,17 @@
                            the three wires crossing the EX/M-to-DMEM corridor runs at its
                            own x (860 / 875 / 890) so they read as separate paths instead
                            of stacking on top of each other. -->
-                      <path class="pv-wire" data-stage="m" d="M 908,245 L 920,245 L 920,90 L 960,90" />
-                      <path class="pv-wire" data-stage="m" d="M 908,149 L 935,149 L 935,130 L 960,130" />
-                      <path class="pv-wire" data-stage="m" d="M 1015,101 L 1015,115 L 950,115 L 950,176 L 960,176" />
-                      <path class="pv-wire" data-stage="m" d="M 1155,153 L 1165,153" />
+                      <path class="pv-wire" data-stage="m" d="M 890,290 L 915,290 L 915,90 L 960,90" />
+                      <path class="pv-wire" data-stage="m" d="M 890,195 L 935,195 L 935,140 L 995,140" />
+                      <!-- aluRes_m's other branch: past DMEM's addr port, aluRes also
+                           carries on through the M/WB register (m_reg .alu_out(aluRes_wb))
+                           into the WB mux's real ALU input -- routed above DMEM, in the
+                           clear strip between mux M and DMEM's top edge, so it doesn't
+                           cross the MX/WX forwarding lines running below at y=145+. -->
+                      <path class="pv-wire" data-stage="m" d="M 935,150 L 935,105 L 1165,105" />
+                      <path class="pv-wire" data-stage="m" d="M 1025,85 L 1025,115 L 980,115 L 980,165 L 995,165" />
+                      <path class="pv-wire" data-stage="m" d="M 1025,85 L 1015,85" />
+                      <path class="pv-wire" data-stage="m" d="M 1150,150 L 1180,150" />
                       <!-- WB mux really has three inputs (WBSel selects among them) --
                            drawn as three distinct wires from the M/WB register, not one
                            merged line, matching how Reg File's dataA/dataB are handled.
@@ -250,18 +254,22 @@
                            get one either, and drawing one here read as a second,
                            redundant "WB wire" doing the same job as the real dataD loop
                            just below it. -->
-                      <path class="pv-wire" data-stage="wb" d="M 1183,153 L 1260,153 L 1260,97 L 1330,97" />
-                      <path class="pv-wire" data-stage="wb" d="M 1183,171 L 1270,171 L 1270,109 L 1330,109" />
+                      <path class="pv-wire" data-stage="wb" d="M 1185,105 L 1220,105 L 1220,105 L 1330,105" />
+                      <path class="pv-wire" data-stage="wb" d="M 1165,150 L 1250,150 L 1250,115 L 1330,115" />
                       <!-- dataD loops back over the top -- it's the WB mux's selected
                            output, so it naturally starts near the top lanes rather than
                            dropping all the way down first. -->
-                      <path class="pv-wire" data-role="wb-feedback" d="M 1357.5,73 L 1357.5,32 L 380,32 L 380,95" />
+                      <path class="pv-wire" data-role="wb-feedback" d="M 1400,105 L 1400,30 L 380,30 L 380,95" />
+                      <path class="pv-wire" data-role="wb-feedback" d="M 1400,105 L 1385,105" />
+                      <path class="pv-wire" data-role="wb-feedback" d="M 380,95 L 400,95" />
                       <!-- both redirect candidates enter PC Sel's left (real input)
                            edge at their own y, and travel down their own dedicated x
                            on the way there, so the two loops never run parallel on top
                            of each other and don't crowd the box's one small edge. -->
-                      <path class="pv-wire" data-role="pc-redirect" d="M 875,149 L 885,149 L 885,440 L 62,440 L 62,155 L 70,155" />
-                      <path class="pv-wire" data-role="pc-redirect" d="M 875,218 L 885,218 L 885,460 L 82,460 L 82,170 L 70,170" />
+                      <path class="pv-wire" data-role="pc-redirect" d="M 855,195 L 870,195 L 870,440 L 50,440 L 50,160 L 70,160" />
+                      <path class="pv-wire" data-role="pc-redirect" d="M 860,335 L 885,335 L 885,460 L 60,460 L 60,200 L 60,200 L 60,200 L 60,175 L 60,175" />
+                      <path class="pv-wire" data-role="pc-redirect" d="M 60,175 L 60,170" />
+                      <path class="pv-wire" data-role="pc-redirect" d="M 60,170 L 70,170" />
 
                       <!-- PC+4 propagation lane: the adder's output doesn't just feed
                            the PC-select mux (fed via the wire above), it also rides
@@ -271,11 +279,11 @@
                            reaches WB. Drawn as its own lane above the main datapath;
                            colored per-stage exactly like the other wires above, since
                            it reuses the same data-stage attribute. -->
-                      <path class="pv-wire" data-stage="if" d="M 180,88 L 210,88 L 210,18 L 358,18" />
-                      <path class="pv-wire" data-stage="id" d="M 340,18 L 578,18" />
-                      <path class="pv-wire" data-stage="ex" d="M 560,18 L 908,18" />
-                      <path class="pv-wire" data-stage="m" d="M 890,18 L 1183,18" />
-                      <path class="pv-wire" data-stage="wb" d="M 1183,18 L 1250,18 L 1250,85 L 1330,85" />
+                      <path class="pv-wire" data-stage="if" d="M 180,88 L 210,88 L 210,15 L 358,15" />
+                      <path class="pv-wire" data-stage="id" d="M 340,15 L 578,15" />
+                      <path class="pv-wire" data-stage="ex" d="M 560,15 L 908,15" />
+                      <path class="pv-wire" data-stage="m" d="M 890,15 L 1183,15" />
+                      <path class="pv-wire" data-stage="wb" d="M 1183,15 L 1250,15 L 1250,95 L 1330,95" />
 
                       <!-- Pipelined-instruction lane: the raw instruction word rides
                            along beside the data it produces, same mechanism as PC+4
@@ -286,23 +294,25 @@
                            unconditionally whatever instruction is currently in WB,
                            the same as the rest of this lane (unlike dataD, which is
                            gated by RegWEn and only shows when a write actually happens). -->
-                      <path class="pv-wire" data-stage="if" d="M 330,159 L 330,320 L 358,320" />
-                      <path class="pv-wire" data-stage="id" d="M 340,320 L 578,320" />
-                      <path class="pv-wire" data-stage="ex" d="M 560,320 L 908,320" />
-                      <path class="pv-wire" data-stage="m" d="M 890,320 L 1183,320" />
+                      <path class="pv-wire" data-stage="if" d="M 325,160 L 325,365 L 358,365" />
+                      <path class="pv-wire" data-stage="id" d="M 340,365 L 578,365" />
+                      <path class="pv-wire" data-stage="ex" d="M 560,365 L 908,365" />
+                      <path class="pv-wire" data-stage="m" d="M 890,365 L 1185,365" />
                       <!-- addrD is this lane's own WB-end tap, looped back to Reg File
                            on its own dedicated x so it doesn't run alongside dataD's
                            loop above or the redirect loops below. -->
-                      <path class="pv-wire" data-stage="wb" d="M 1183,320 L 1183,340 L 363,340 L 363,115 L 380,115" />
+                      <path class="pv-wire" data-stage="wb" d="M 1205,365 L 1205,390 L 380,390 L 380,115 L 400,115" />
+                      <path class="pv-wire" data-stage="wb" d="M 1205,365 L 1165,365" />
                     </svg>
 
                     <!-- forwarding highlight overlay (drawn on top of the static wires) -->
                     <svg class="pv-svg-overlay" viewBox="0 0 1560 610" preserveAspectRatio="none">
-                      <path id="line-mx-a" class="pv-fwd-line" d="M 908,149 L 908,355 L 665,355 L 665,137 L 700,137" />
-                      <path id="line-wx-a" class="pv-fwd-line" d="M 1183,153 L 1183,372 L 665,372 L 665,137 L 700,137" />
-                      <path id="line-mx-b" class="pv-fwd-line" d="M 908,149 L 908,389 L 675,389 L 675,165 L 700,165" />
-                      <path id="line-wx-b" class="pv-fwd-line" d="M 1183,153 L 1183,406 L 675,406 L 675,165 L 700,165" />
-                      <path id="line-wm" class="pv-fwd-line" d="M 1183,153 L 1183,195 L 945,195 L 945,80 L 960,80" />
+                      <path id="line-mx-a" class="pv-fwd-line" d="M 925,195 L 925,405 L 640,405 L 640,170 L 690,170" />
+                      <path id="line-wx-a" class="pv-fwd-line" d="M 1400,105 L 1400,30 L 630,30 L 630,125 L 690,125" />
+                      <path id="line-mx-b" class="pv-fwd-line" d="M 935,150 L 935,420 L 665,420 L 665,245 L 690,245" />
+                      <path id="line-wx-b" class="pv-fwd-line" d="M 1400,105 L 1400,30 L 655,30 L 655,230 L 690,230" />
+                      <path id="line-wm" class="pv-fwd-line" d="M 940,30 L 940,80" />
+                      <path class="pv-fwd-line" d="M 940,80 L 960,80" />
                     </svg>
                   </div>
                 </div>

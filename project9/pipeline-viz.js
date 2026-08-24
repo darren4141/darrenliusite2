@@ -136,12 +136,6 @@
     return v; // already formatted "0x........" by the trace
   }
 
-  function setCard(stageEl, seq, isBubble, mnemonic) {
-    stageEl.textContent = isBubble ? "bubble" : mnemonic;
-    stageEl.classList.toggle("pv-bubble", isBubble);
-    stageEl.style.color = isBubble ? "" : colorForSeq(seq);
-  }
-
   // wires tagged data-stage="if"/"id"/"ex"/"m"/"wb" carry that stage's
   // current instruction -- recolor them each cycle so the color reads on
   // the path itself, cached once since the tagged set never changes.
@@ -193,7 +187,6 @@
     const trace = state.trace;
     if (!trace) return;
     const c = trace[state.idx];
-    const D = window.RiscvDisasm.disassemble;
 
     $("pv-cycle-label").textContent = `Cycle ${c.cycle} / ${trace.length - 1}`;
     $("pv-scrubber").value = state.idx;
@@ -215,17 +208,7 @@
       el.classList.toggle("pv-legend-active", activeSeqs.has(seq));
     }
 
-    setCard($("pv-if-card"), c.if.seq, isEmpty(c.if), D(c.if.inst_raw));
-    setCard($("pv-id-card"), c.id.seq, isEmpty(c.id), D(c.id.inst));
-    setCard($("pv-ex-card"), c.ex.seq, isEmpty(c.ex), D(c.ex.inst));
-    setCard($("pv-m-card"), c.m.seq, isEmpty(c.m), D(c.m.inst));
     const wbEmpty = isEmpty(c.wb);
-    const wbText = wbEmpty
-      ? ""
-      : c.wb.control.regwen
-      ? `x${c.wb.waddr} ← ${c.wb.wdata}`
-      : "(no write)";
-    setCard($("pv-wb-card"), c.wb.seq, wbEmpty, wbText);
 
     paintStageWires("if", c.if.seq, isEmpty(c.if));
     paintStageWires("id", c.id.seq, isEmpty(c.id));
@@ -239,7 +222,6 @@
     paintRoleWires("wb-feedback", writeActive, colorForSeq(c.wb.seq));
 
     $("box-pc").classList.toggle("pv-frozen", !!c.stall);
-    $("pv-if-card").classList.toggle("pv-card-frozen", !!c.stall);
 
     const FWD_LABEL = { 0: "none", 1: "none", 2: "MX", 3: "WX", 4: "WX+PC4", 5: "MX+PC4" };
     const fwdActive = c.ex.fwdA >= 2 || c.ex.fwdB >= 2 || c.ex.fwdM === 1 || c.ex.fwdrs2EXreg === 1;
@@ -275,8 +257,6 @@
     setHi("line-mx-b", c.ex.fwdB === 2);
     setHi("line-wx-b", c.ex.fwdB === 3);
     setHi("line-wm", c.ex.fwdM === 1);
-
-    $("pv-if-card").classList.toggle("pv-card-flushed", !!(c.ex.flush));
 
     $("pv-annotation").textContent = annotate(c);
 
