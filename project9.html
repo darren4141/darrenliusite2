@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>5-Stage Pipelined RISC-V CPU</title>
     <link rel="stylesheet" href="projectstylesheet.css">
+    <link rel="stylesheet" href="project9/pipeline-viz.css">
     <style>
         pre {
             background-color: var(--color-surface);
@@ -47,12 +48,277 @@
         <div class="project-text">
             <h1>5-Stage Pipelined RISC-V CPU in Verilog</h1>
             <h2 class="subtitle">2026</h2>
-            <p>I designed and implemented a complete 5-stage pipelined CPU in Verilog that executes the RISC-V RV32I instruction set. The project covers the full design from individual logic components up to a working processor, including all the hazard mitigation techniques a real pipeline requires: data forwarding, load-use stalling, and control flow flushing. I also built a single-cycle reference implementation for comparison, a comprehensive test suite, and a Python-based build system.</p>
-            <p>The complete source is available on <a href="https://github.com/darren4141/learn_verilog" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
+            <p>A 5-stage pipelined CPU implementing the RISC-V RV32I instruction set, written from scratch in Verilog. Features a full datapath, hazard mitigation (forwarding, load-use stalling, branch/jump flushing).</p>
+            <p>The project is available on <a href="https://github.com/darren4141/Pipelined-CPU" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
 
-            <h2>Why pipelining?</h2>
-            <p>A single-cycle CPU completes one instruction per clock cycle but must run the clock slowly enough for the slowest instruction to finish. Pipelining overlaps the execution of multiple instructions: while one instruction is in the execute stage, the next is being decoded, and the one after that is being fetched. This allows the clock to run much faster, improving throughput significantly.</p>
-            <p>The pipeline I implemented has five stages: Instruction Fetch (IF), Instruction Decode (ID), Execute (EX), Memory (M), and Write Back (WB). Each stage operates on a different instruction every cycle, with intermediate pipeline registers holding state between stages.</p>
+            <section id="pipeline-visualizer" class="pv-root">
+              <h2>Try it: step through a real trace</h2>
+              <p>Sample programs and results come from Icarus Verilog simulations, with data dumped cycle-by-cycle. Pick a scenario and step through cycles
+              (or press Play) to watch each instruction flow through the pipeline.</p>
+
+              <div class="pv-controls">
+                <label for="pv-program">Scenario:</label>
+                <select id="pv-program"></select>
+                <button id="pv-prev" type="button">&larr; Prev</button>
+                <button id="pv-play" type="button">Play</button>
+                <button id="pv-next" type="button">Next &rarr;</button>
+                <span id="pv-cycle-label" class="pv-cycle-label"></span>
+                <input id="pv-scrubber" type="range" min="0" max="0" value="0" step="1" />
+              </div>
+
+              <div id="pv-program-legend" class="pv-program-legend"></div>
+
+              <div class="pv-diagram-wrap">
+                <div class="pv-diagram-scale">
+                  <div class="pv-diagram" id="pv-diagram-native">
+
+                    <div class="pv-col-label" style="left:70px;">IF</div>
+                    <div class="pv-col-label" style="left:380px;">ID</div>
+                    <div class="pv-col-label" style="left:700px;">EX</div>
+                    <div class="pv-col-label" style="left:960px;">M</div>
+                    <div class="pv-col-label" style="left:1330px;">WB</div>
+
+                    <!-- pipeline registers: tall bars like a real datapath diagram,
+                         behind everything else. The bar itself is a fixed neutral
+                         blue (it's the physical register); the instruction currently
+                         held in it is named by the colored label below the bar and
+                         by the colored wires passing through it. Extended to span
+                         from the PC+4 lane at the top down through the pipelined-
+                         instruction lane and its addrD tap at the bottom, since both
+                         are as much "pipeline register content" as the main datapath. -->
+                    <div id="bar-ifid" class="pv-pipereg-bar" style="left:340px;"></div>
+                    <div id="bar-idex" class="pv-pipereg-bar" style="left:560px;"></div>
+                    <div id="bar-exm" class="pv-pipereg-bar" style="left:890px;"></div>
+                    <div id="bar-mwb" class="pv-pipereg-bar" style="left:1165px;"></div>
+
+                    <div class="pv-port-label" style="left:195px; top:6px;">PC+4</div>
+                    <div class="pv-port-label" style="left:195px; top:300px;">Instruction</div>
+
+                    <div id="box-pcmux" class="pv-box pv-box-mux pv-trap-r" style="left:70px; top:143px; width:50px; height:32px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">PC Sel</span></div>
+                    <div id="box-pc" class="pv-box" style="left:130px; top:143px; width:50px; height:32px;">PC</div>
+                    <div id="box-const4" class="pv-box" style="left:95px; top:50px; width:24px; height:16px; font-size:10px; padding:2px;">4</div>
+                    <div id="box-adder4" class="pv-box pv-trap-r" style="left:130px; top:73px; width:50px; height:30px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">Adder</span></div>
+                    <div id="box-imem" class="pv-box" style="left:190px; top:129px; width:140px; height:60px;">IMEM</div>
+                    <div class="pv-port-label" style="left:194px; top:143px;">addr</div>
+                    <div class="pv-port-label pv-port-label-r" style="left:290px; top:143px;">inst</div>
+
+                    <div id="box-regfile" class="pv-box pv-box-tall" style="left:380px; top:80px; width:170px; height:165px;">Reg File<span class="pv-box-sub">32 &times; 32-bit</span></div>
+                    <div class="pv-port-label" style="left:384px; top:91px;">dataD</div>
+                    <div class="pv-port-label" style="left:384px; top:111px;">addrD</div>
+                    <div class="pv-port-label" style="left:384px; top:151px;">addrA</div>
+                    <div class="pv-port-label" style="left:384px; top:191px;">addrB</div>
+                    <div class="pv-port-label pv-port-label-r" style="left:490px; top:151px;">dataA</div>
+                    <div class="pv-port-label pv-port-label-r" style="left:490px; top:191px;">dataB</div>
+
+                    <div id="box-bcomp" class="pv-box pv-trap-r" style="left:700px; top:73px; width:120px; height:32px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">Branch Comp</span></div>
+                    <div id="box-muxa" class="pv-box pv-box-mux pv-trap-r" style="left:700px; top:123px; width:55px; height:28px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">mux A</span></div>
+                    <div id="box-muxb" class="pv-box pv-box-mux pv-trap-r" style="left:700px; top:157px; width:55px; height:28px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">mux B</span></div>
+                    <div id="box-immgen" class="pv-box pv-trap-r" style="left:700px; top:203px; width:82px; height:30px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">Imm Gen</span></div>
+                    <div id="box-alu" class="pv-box pv-box-alu pv-trap-alu" style="left:790px; top:108px; width:85px; height:82px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,30 55,30 100,50 55,70 0,70 18,50" /></svg><span class="pv-trap-label">ALU</span></div>
+                    <div id="box-jump" class="pv-box pv-trap-r" style="left:790px; top:203px; width:85px; height:30px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">Jump Unit</span></div>
+
+                    <!-- mux M / DMEM shifted only slightly (not the full cascade the
+                         ID/EX/M columns to their left got) so the EX/M-bar-to-DMEM
+                         corridor widens from 22px to over 50px -- room for the three
+                         separate wires that cross it (ALU result to addr, dataB to
+                         mux M, mux M's output to DataW) to run at distinct x's instead
+                         of nearly overlapping. DMEM itself is also wider. -->
+                    <div id="box-muxm" class="pv-box pv-box-mux pv-trap-r" style="left:960px; top:73px; width:55px; height:28px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">mux M</span></div>
+                    <div id="box-dmem" class="pv-box" style="left:960px; top:123px; width:195px; height:60px;">DMEM</div>
+                    <div class="pv-port-label" style="left:964px; top:126px;">addr</div>
+                    <div class="pv-port-label" style="left:964px; top:172px;">DataW</div>
+                    <div class="pv-port-label pv-port-label-r" style="left:1151px; top:145px;">DataR</div>
+
+                    <div id="box-wbmux" class="pv-box pv-box-mux pv-trap-r" style="left:1330px; top:73px; width:55px; height:44px;"><svg class="pv-trap-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,18 100,82 0,100" /></svg><span class="pv-trap-label">WB mux</span></div>
+                    <div class="pv-port-label" style="left:1188px; top:81px;">2 PC+4</div>
+                    <div class="pv-port-label" style="left:1188px; top:93px;">1 ALU</div>
+                    <div class="pv-port-label" style="left:1188px; top:105px;">0 DataR</div>
+
+                    <!-- colored instruction labels: sit clear of the wires/boxes, below
+                         the main datapath, directly under the bar they belong to -->
+                    <div class="pv-pipereg-label" style="left:310px; top:253px;">IF/ID</div>
+                    <div id="pv-if-card" class="pv-card" style="left:325px; top:267px; width:90px;"></div>
+
+                    <div class="pv-pipereg-label" style="left:545px; top:253px;">ID/EX</div>
+                    <div id="pv-id-card" class="pv-card" style="left:515px; top:267px; width:90px;"></div>
+
+                    <div class="pv-pipereg-label" style="left:920px; top:253px;">EX/M</div>
+                    <div id="pv-ex-card" class="pv-card" style="left:890px; top:267px; width:90px;"></div>
+
+                    <div class="pv-pipereg-label" style="left:1185px; top:253px;">M/WB</div>
+                    <div id="pv-m-card" class="pv-card" style="left:1155px; top:267px; width:90px;"></div>
+
+                    <div class="pv-pipereg-label" style="left:1445px; top:253px;">Writeback</div>
+                    <div id="pv-wb-card" class="pv-card" style="left:1430px; top:267px; width:110px;"></div>
+
+                    <!-- hazard control band -->
+                    <div class="pv-hazard-band">
+                      <div class="pv-hazard-box" id="pv-forwarding-box">
+                        <div class="pv-hazard-box-title">Forwarding Unit</div>
+                        <div id="pv-forwarding-info" class="pv-hazard-info"></div>
+                      </div>
+                      <div class="pv-hazard-box" id="pv-stalling-box">
+                        <div class="pv-hazard-box-title">Stalling Unit</div>
+                        <div id="pv-stalling-info" class="pv-hazard-info"></div>
+                      </div>
+                      <div class="pv-hazard-box" id="pv-flush-box">
+                        <div class="pv-hazard-box-title">Flush Unit</div>
+                        <div id="pv-flush-info" class="pv-hazard-info"></div>
+                      </div>
+                      <div class="pv-hazard-box pv-hazard-box-control">
+                        <div class="pv-hazard-box-title">Control Unit</div>
+                        <div id="pv-control-grid" class="pv-control-grid"></div>
+                      </div>
+                    </div>
+
+                    <!-- static datapath wires (always visible). data-stage marks which
+                         pipeline stage's current instruction flows through that wire --
+                         pipeline-viz.js recolors these per cycle so the instruction's
+                         color moves through the actual paths instead of sitting in a box.
+                         data-role marks the two long control-loop wires, colored only
+                         when they're actually carrying something that cycle. Wire
+                         positions are generated from a coordinate table and checked
+                         for box overlap -- see gen_diagram2.js in the plan history. -->
+                    <svg class="pv-svg-overlay" viewBox="0 0 1560 610" preserveAspectRatio="none">
+                      <path class="pv-wire" d="M 120,159 L 130,159" />
+                      <!-- adder takes two inputs from its left (long) side: PC below,
+                           feeding around from PC's own top since PC sits directly
+                           under the adder rather than beside it, and the raw constant
+                           4 above it. -->
+                      <path class="pv-wire" d="M 155,143 L 155,120 L 125,120 L 125,96 L 130,96" />
+                      <path class="pv-wire" d="M 119,58 L 125,58 L 125,80 L 130,80" />
+                      <path class="pv-wire" d="M 180,159 L 190,159" />
+                      <!-- adder's output exits its narrow right edge and fans out: one
+                           branch feeds PC Sel as the default next-PC candidate, the
+                           other becomes the PC+4 propagation lane above. Wraps around
+                           to enter PC Sel's left (real input) edge from outside, above
+                           the two redirect loops' own entries at y=155/170, so all
+                           three candidate wires read as separate left-edge inputs
+                           instead of one guessing at the top. -->
+                      <path class="pv-wire" d="M 180,88 L 180,125 L 40,125 L 40,150 L 70,150" />
+                      <path class="pv-wire" data-stage="if" d="M 330,159 L 358,159" />
+                      <path class="pv-wire" data-stage="if" d="M 155,143 L 155,107 L 358,107 L 358,115" />
+                      <!-- inst splits into addrA and addrB right where it crosses the
+                           IF/ID bar -- same trunk-and-branch convention as Reg File's
+                           dataA/dataB output below, applied on the read-address side too. -->
+                      <path class="pv-wire" data-stage="id" d="M 340,159 L 373,159 L 373,155 L 380,155" />
+                      <path class="pv-wire" data-stage="id" d="M 340,159 L 373,159 L 373,195 L 380,195" />
+                      <!-- dataA and dataB each travel as one clean trunk line out of Reg File,
+                           branching in a T only right where they actually enter a destination --
+                           easier to trace by eye than four separate near-parallel diagonals. This
+                           gap (ID/EX bar to the EX column) is deliberately wide so the trunks,
+                           branches, and the forwarding-highlight lines below all have room to
+                           run in parallel without bunching into each other. -->
+                      <path class="pv-wire" data-stage="ex" d="M 550,155 L 615,155 L 615,83 L 700,83" />
+                      <path class="pv-wire" data-stage="ex" d="M 550,155 L 615,155 L 615,137 L 700,137" />
+                      <path class="pv-wire" data-stage="ex" d="M 550,195 L 635,195 L 635,97 L 700,97" />
+                      <path class="pv-wire" data-stage="ex" d="M 550,195 L 635,195 L 635,165 L 700,165" />
+                      <!-- imm gen's output exits its own narrow right edge and enters
+                           mux B's front-left face, stacked below where dataB enters --
+                           two distinct inputs on the same (real) input side, matching
+                           how every other mux in this diagram is wired. -->
+                      <path class="pv-wire" data-stage="ex" d="M 782,218 L 782,240 L 685,240 L 685,180 L 700,180" />
+                      <!-- mux A and mux B each drive one of the ALU's two real input
+                           points -- at the 30%/70% height marks, matching the polygon's
+                           own notches. A small round dot marks each entry point itself,
+                           since a fractional height on a small shape is hard to
+                           distinguish from "near the edge" without one. -->
+                      <path class="pv-wire" data-stage="ex" d="M 755,137 L 775,137 L 775,133 L 790,133" />
+                      <path class="pv-wire pv-port-dot" data-stage="ex" d="M 790,133 L 790.1,133" />
+                      <path class="pv-wire" data-stage="ex" d="M 755,171 L 775,171 L 775,165 L 790,165" />
+                      <path class="pv-wire pv-port-dot" data-stage="ex" d="M 790,165 L 790.1,165" />
+                      <path class="pv-wire" data-stage="ex" d="M 875,149 L 890,149" />
+                      <path class="pv-wire" data-stage="ex" d="M 578,195 L 578,245 L 908,245" />
+                      <!-- DMEM's addr comes from the ALU result (base + offset); its
+                           DataW comes from dataB (the store's source register), routed
+                           through mux M which can substitute a freshly-forwarded value
+                           when the store's data register was just written in WB. Each of
+                           the three wires crossing the EX/M-to-DMEM corridor runs at its
+                           own x (860 / 875 / 890) so they read as separate paths instead
+                           of stacking on top of each other. -->
+                      <path class="pv-wire" data-stage="m" d="M 908,245 L 920,245 L 920,90 L 960,90" />
+                      <path class="pv-wire" data-stage="m" d="M 908,149 L 935,149 L 935,130 L 960,130" />
+                      <path class="pv-wire" data-stage="m" d="M 1015,101 L 1015,115 L 950,115 L 950,176 L 960,176" />
+                      <path class="pv-wire" data-stage="m" d="M 1155,153 L 1165,153" />
+                      <!-- WB mux really has three inputs (WBSel selects among them) --
+                           drawn as three distinct wires from the M/WB register, not one
+                           merged line, matching how Reg File's dataA/dataB are handled.
+                           Mux pushed further right, deeper into the canvas's unused right
+                           margin, so this corridor -- and the three stacked candidate
+                           labels in it -- has real room. No separate wire from the mux to
+                           the Writeback card below: none of the other four stage cards
+                           get one either, and drawing one here read as a second,
+                           redundant "WB wire" doing the same job as the real dataD loop
+                           just below it. -->
+                      <path class="pv-wire" data-stage="wb" d="M 1183,153 L 1260,153 L 1260,97 L 1330,97" />
+                      <path class="pv-wire" data-stage="wb" d="M 1183,171 L 1270,171 L 1270,109 L 1330,109" />
+                      <!-- dataD loops back over the top -- it's the WB mux's selected
+                           output, so it naturally starts near the top lanes rather than
+                           dropping all the way down first. -->
+                      <path class="pv-wire" data-role="wb-feedback" d="M 1357.5,73 L 1357.5,32 L 380,32 L 380,95" />
+                      <!-- both redirect candidates enter PC Sel's left (real input)
+                           edge at their own y, and travel down their own dedicated x
+                           on the way there, so the two loops never run parallel on top
+                           of each other and don't crowd the box's one small edge. -->
+                      <path class="pv-wire" data-role="pc-redirect" d="M 875,149 L 885,149 L 885,440 L 62,440 L 62,155 L 70,155" />
+                      <path class="pv-wire" data-role="pc-redirect" d="M 875,218 L 885,218 L 885,460 L 82,460 L 82,170 L 70,170" />
+
+                      <!-- PC+4 propagation lane: the adder's output doesn't just feed
+                           the PC-select mux (fed via the wire above), it also rides
+                           along in every pipeline register as a candidate writeback
+                           value (WBSel=2, for JAL/JALR's link register) even though
+                           nothing reads it until an instruction with that encoding
+                           reaches WB. Drawn as its own lane above the main datapath;
+                           colored per-stage exactly like the other wires above, since
+                           it reuses the same data-stage attribute. -->
+                      <path class="pv-wire" data-stage="if" d="M 180,88 L 210,88 L 210,18 L 358,18" />
+                      <path class="pv-wire" data-stage="id" d="M 340,18 L 578,18" />
+                      <path class="pv-wire" data-stage="ex" d="M 560,18 L 908,18" />
+                      <path class="pv-wire" data-stage="m" d="M 890,18 L 1183,18" />
+                      <path class="pv-wire" data-stage="wb" d="M 1183,18 L 1250,18 L 1250,85 L 1330,85" />
+
+                      <!-- Pipelined-instruction lane: the raw instruction word rides
+                           along beside the data it produces, same mechanism as PC+4
+                           but below the datapath instead of above it. addrD (which
+                           register WB writes to) is just this lane's rd field tapped
+                           off at its WB end and routed back to Reg File -- reuses
+                           data-stage="wb" rather than a separate role, since it's
+                           unconditionally whatever instruction is currently in WB,
+                           the same as the rest of this lane (unlike dataD, which is
+                           gated by RegWEn and only shows when a write actually happens). -->
+                      <path class="pv-wire" data-stage="if" d="M 330,159 L 330,320 L 358,320" />
+                      <path class="pv-wire" data-stage="id" d="M 340,320 L 578,320" />
+                      <path class="pv-wire" data-stage="ex" d="M 560,320 L 908,320" />
+                      <path class="pv-wire" data-stage="m" d="M 890,320 L 1183,320" />
+                      <!-- addrD is this lane's own WB-end tap, looped back to Reg File
+                           on its own dedicated x so it doesn't run alongside dataD's
+                           loop above or the redirect loops below. -->
+                      <path class="pv-wire" data-stage="wb" d="M 1183,320 L 1183,340 L 363,340 L 363,115 L 380,115" />
+                    </svg>
+
+                    <!-- forwarding highlight overlay (drawn on top of the static wires) -->
+                    <svg class="pv-svg-overlay" viewBox="0 0 1560 610" preserveAspectRatio="none">
+                      <path id="line-mx-a" class="pv-fwd-line" d="M 908,149 L 908,355 L 665,355 L 665,137 L 700,137" />
+                      <path id="line-wx-a" class="pv-fwd-line" d="M 1183,153 L 1183,372 L 665,372 L 665,137 L 700,137" />
+                      <path id="line-mx-b" class="pv-fwd-line" d="M 908,149 L 908,389 L 675,389 L 675,165 L 700,165" />
+                      <path id="line-wx-b" class="pv-fwd-line" d="M 1183,153 L 1183,406 L 675,406 L 675,165 L 700,165" />
+                      <path id="line-wm" class="pv-fwd-line" d="M 1183,153 L 1183,195 L 945,195 L 945,80 L 960,80" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <p id="pv-annotation" class="pv-annotation"></p>
+
+              <details class="pv-details">
+                <summary>Full cycle data (every wire)</summary>
+                <div id="pv-fields" class="pv-fields"></div>
+              </details>
+            </section>
+
+            <h2>Pipelining</h2>
+            <p>A single-cycle CPU has to run its clock slow enough for the slowest instruction to finish end to end. Pipelining overlaps execution instead. We split our CPU into five "stages" so we can allocate different stages to different instructions. For example, while one instruction is in Execute, the next is being decoded and the one after that is being fetched. This means the clock is bounded by one stage's delay, not one whole instruction's.</p>
+            <p>Five stages: Instruction Fetch (IF), Instruction Decode (ID), Execute (EX), Memory (M), Write Back (WB). Each stage works on a different instruction every cycle; pipeline registers between stages hold state so nothing overwrites data another stage still needs.</p>
 
             <pre>
 Cycle:      1    2    3    4    5    6    7
@@ -61,24 +327,24 @@ Instr 2:         IF   ID   EX   M    WB
 Instr 3:              IF   ID   EX   M    WB
 Instr 4:                   IF   ID   EX   M    WB</pre>
 
-            <h2>Architecture Overview</h2>
-            <p>The CPU uses a Harvard-style architecture with separate instruction memory and data memory, which allows an instruction fetch and a data load/store to happen in the same cycle. The design is broken into 25 individual Verilog modules that each handle a specific task:</p>
+            <h2>Architecture</h2>
+            <p>Separate instruction and data memory, so a fetch and a load/store can happen in the same cycle. 25 Verilog modules, each one job:</p>
             <ul>
-                <li><strong>ALU</strong> — 32 arithmetic and logic operations (add, sub, AND, OR, XOR, shifts, set-less-than)</li>
-                <li><strong>Control unit</strong> — decodes each instruction and produces 18-bit control signals</li>
-                <li><strong>Immediate generator</strong> — extracts and sign-extends I, S, B, U, and J format immediates</li>
-                <li><strong>Register file</strong> — 32 × 32-bit registers with two read ports and one write port</li>
-                <li><strong>Instruction memory / Data memory</strong> — separate memories; dmem supports byte, half-word, and word accesses</li>
-                <li><strong>Pipeline registers</strong> (IF/ID, ID/EX, EX/M, M/WB) — hold state across stage boundaries</li>
-                <li><strong>Hazard mitigation units</strong> — forwarding, stalling, and flushing (described below)</li>
+                <li><strong>ALU:</strong> 32 arithmetic and logic operations (add, sub, AND, OR, XOR, shifts, set-less-than)</li>
+                <li><strong>Control unit:</strong> decodes each instruction and produces 18-bit control signals</li>
+                <li><strong>Immediate generator:</strong> extracts and sign-extends I, S, B, U, and J format immediates</li>
+                <li><strong>Register file:</strong> 32 x 32-bit registers with two read ports and one write port</li>
+                <li><strong>Instruction memory / Data memory:</strong> separate memories; dmem supports byte, half-word, and word accesses</li>
+                <li><strong>Pipeline registers:</strong> (IF/ID, ID/EX, EX/M, M/WB), hold state across stage boundaries</li>
+                <li><strong>Hazard mitigation units:</strong> forwarding, stalling, and flushing units (described below)</li>
             </ul>
 
-            <h2>The Hazard Problem</h2>
-            <p>Pipelining introduces hazards: situations where the correct result of one instruction is not yet available when a later instruction needs it. Without mitigation, a pipeline would produce silently wrong results. There are three classes of hazard I had to solve:</p>
+            <h2>Hazards</h2>
+            <p>Overlapping instructions means a later one can reach a stage before an earlier one has produced the value it needs which results in a hazard. Left unhandled, the pipeline uses stale values and silently produces wrong results. Hazards can come in many forms and we have different methods/units to deal with them.</p>
 
-            <h2>1. Data Hazards — Forwarding</h2>
-            <p>When instruction A produces a value and instruction B immediately uses it, B reaches the Execute stage before A's result has been written back to the register file. The solution is data forwarding (also called operand bypassing): route the result directly from wherever it currently sits in the pipeline to the point where it is needed, bypassing the register file entirely.</p>
-            <p>I implemented three forwarding paths:</p>
+            <h2>Forwarding</h2>
+            <p>Suppose we have two sequential instructions A and B. When instruction B needs a value instruction A just produced, B reaches Execute before A's result has made it back to the register file. One way of solving this is via forwarding, which routes the result directly from wherever it currently sits in the pipeline to where it's needed, skipping the register file entirely.</p>
+            <p>Three forwarding paths:</p>
             <table>
                 <tr>
                     <th>Path</th>
@@ -101,25 +367,28 @@ Instr 4:                   IF   ID   EX   M    WB</pre>
                     <td>0 cycles</td>
                 </tr>
             </table>
-            <p>The forwarding unit compares the destination register of instructions in the M and WB stages against the source registers of the instruction currently in EX. When a match is found, multiplexers in the EX stage select the forwarded value instead of the stale register file output. MX forwarding is checked first; if both M and WB are writing to the same destination, M takes priority.</p>
-            <p>With forwarding, a sequence of back-to-back ALU instructions executes with zero stall cycles:</p>
+            <p>The forwarding unit is responsible for comparing the destination register of the instruction currently in M and WB against the source registers of the instruction in EX. If the registers match the forwarding unit must use the muxes in EX to bypass the stale register values and select the forwarded value. MX is checked first, and if M and WB are both writing the same destination, M takes.</p>
+            <p>With forwarding, back-to-back ALU instructions run with zero stall cycles:</p>
             <pre>
 add x1, x0, x0    # result available in M by cycle 4
 add x2, x1, x0    # x1 forwarded from M  → no stall
 add x3, x2, x0    # x2 forwarded from WB → no stall</pre>
 
-            <h2>2. Load-Use Hazards — Stalling</h2>
-            <p>Forwarding cannot handle every case. A load instruction (lw, lh, lb) retrieves its result from data memory at the end of the M stage. If the very next instruction needs that value, it will be in the EX stage while the load is still in M — one cycle too early for MX forwarding to work.</p>
-            <p>The stalling unit detects this condition and inserts a one-cycle bubble: the PC and IF/ID register are frozen for one cycle, and a NOP is injected into the ID/EX register. After the stall, the load result is in the M stage and MX forwarding takes over.</p>
+            <h2>Stalling</h2>
+            <p>Load instructions (lw, lh, lb) don't have their results until data memory returns it at the end of M. If the next instruction needs that value, it hits EX while the load is still in M, one cycle too early for forwarding to reach it.</p>
+            <p>For this reason we need stalling. The stalling unit catches this and inserts a one-cycle bubble: PC and IF/ID freeze for a cycle, a NOP goes into ID/EX. After one cycle of stalling, the load can then be forwarded. The MX path is wired only from the M-stage ALU result, which for a load is the computed address, not the loaded data, so after the stall it's WX, not MX, that actually supplies the value.</p>
             <pre>
 Cycle:    1     2     3       4          5
 lw x1:   IF    ID    EX   →  M (stall)  WB
-add x3:        IF    ID   →  ID (stall) EX ← x1 forwarded from M</pre>
+add x3:        IF    ID   →  ID (stall) EX ← x1 forwarded from WB (WX)</pre>
 
-            <h2>3. Control Hazards — Flushing</h2>
-            <p>Branch and jump decisions are resolved in the EX stage (cycle 3 of an instruction). By that point, two instructions have already been fetched and partially executed down the wrong path. When a branch is taken, those instructions must be invalidated.</p>
-            <p>The flush unit monitors the EX stage and, when a branch is taken or an unconditional jump is executed, replaces the IF/ID register contents with a NOP and redirects the PC to the branch target. This costs one incorrectly-fetched instruction per taken branch.</p>
-            <p>I handled JAL specially: since JAL's target is PC-relative and fully computable at fetch time, I resolve it in the IF stage with zero penalty. JALR requires reading a register, so it resolves in ID with a one-cycle penalty.</p>
+            <h2>Flushing</h2>
+            <p>Pipelining means that we load instructions after a branch, even if the branch is taken, In the event that the branch is taken, we have to get rid of the subsequent instructions that may already be running in the pipeline. To solve this we use a flushing unit.</p>
+            <p>Branch and jump outcomes resolve in EX (cycle 3). By then two more instructions have already been fetched down the wrong path and need invalidating if the branch is taken.</p>
+            <p>The flush unit watches EX, on a taken branch or unconditional jump it replaces IF/ID's contents with a NOP and redirects PC to the target.</p>
+            <p>JAL gets special treatment, its target is PC-relative and fully computable at fetch time, so it resolves in IF with zero penalty. JALR needs a register read, so it resolves in ID at a one-cycle cost.</p>
+
+<h3>All possible hazards:</h3>
 
             <table>
                 <tr>
@@ -134,7 +403,7 @@ add x3:        IF    ID   →  ID (stall) EX ← x1 forwarded from M</pre>
                 </tr>
                 <tr>
                     <td>Load followed by use</td>
-                    <td>1-cycle stall + MX forward</td>
+                    <td>1-cycle stall + WX forward</td>
                     <td>+1 cycle</td>
                 </tr>
                 <tr>
@@ -158,9 +427,10 @@ add x3:        IF    ID   →  ID (stall) EX ← x1 forwarded from M</pre>
                     <td>+1 cycle</td>
                 </tr>
             </table>
+            <p>*This CPU implements static not-taken prediction. It costs cycles on every taken branch. A real predictor would recover those cycles at the cost of real hardware and real design complexity.</p>
 
-            <h2>Instruction Set Coverage</h2>
-            <p>The CPU implements the RISC-V RV32I base integer instruction set. I tested 37 out of the approximately 40 core instructions, covering all six instruction encoding formats:</p>
+            <h2>Instruction Set</h2>
+            <p>RV32I, the RISC-V base integer set. 37 of the ~40 core instructions tested, across all six encoding formats:</p>
             <ul>
                 <li><strong>R-type</strong> — add, sub, and, or, xor, sll, srl, sra, slt, sltu</li>
                 <li><strong>I-type</strong> — addi, andi, ori, xori, slli, srli, slti, lw, lh, lb, jalr</li>
@@ -170,22 +440,19 @@ add x3:        IF    ID   →  ID (stall) EX ← x1 forwarded from M</pre>
                 <li><strong>J-type</strong> — jal</li>
             </ul>
 
-            <h2>Testing Methodology</h2>
-            <p>I wrote 42 testbenches in total: 19 unit tests targeting individual components and 23 integration tests that run real RISC-V assembly programs through the full CPU pipeline.</p>
-            <p>Each integration test assembles a program using the RISC-V GNU toolchain, converts it to a Verilog hex file, and loads it into the simulated instruction memory. After execution, the testbench reads the register file and data memory and compares them against expected values. Tests also generate VCD waveform files for analysis in GTKWave when I needed to step through a hazard scenario signal by signal.</p>
-            <p>The test suite includes dedicated hazard tests designed to exercise each mitigation path in isolation:</p>
+            <h2>Testing</h2>
+            <p>42 testbenches: 19 unit tests against individual components, 23 integration tests that run real RISC-V assembly programs through the full pipeline.</p>
+            <p>Each integration test assembles a program with the RISC-V GNU toolchain, converts it to a Verilog hex file, and loads it into simulated instruction memory. After execution the testbench reads back the register file and data memory and checks them against expected values. Tests also dump VCD waveforms for GTKWave, for stepping through a hazard signal by signal when something doesn't match.</p>
+            <p>Dedicated hazard tests exercise each mitigation path in isolation:</p>
             <ul>
-                <li><strong>load_use_hazard</strong> — specifically triggers the stalling path</li>
-                <li><strong>branch_cmp</strong> — exercises all six branch conditions and the flush mechanism</li>
-                <li><strong>jal_fwd_hazard</strong> — tests JAL with forwarding-dependent operands</li>
-                <li><strong>store_load</strong> — exercises the WM forwarding path from WB to the M stage store port</li>
+                <li><strong>load_use_hazard:</strong> specifically triggers the stalling path</li>
+                <li><strong>branch_cmp:</strong> exercises all six branch conditions and the flush mechanism</li>
+                <li><strong>jal_fwd_hazard:</strong> tests JAL with forwarding-dependent operands</li>
+                <li><strong>store_load:</strong> exercises the WM forwarding path from WB to the M stage store port</li>
             </ul>
-            <p>I automated everything through a set of Python scripts. Running all 102 tests (across both the pipelined and single-cycle implementations) and saving timestamped results takes a single command. All 102 tests pass.</p>
-
-            <h2>What I learned</h2>
-            <p>Building a pipeline from scratch forced me to think carefully about timing in a way that single-cycle and behavioral-level designs do not. Forwarding in particular required tracing every data path through the pipeline and deciding, for every possible pair of consecutive instructions, whether a hazard exists and which mux select line resolves it. Getting the forwarding priority logic right — MX before WX when both match — took several iterations of testbench-driven debugging.</p>
-            <p>The experience also gave me a concrete feel for the tradeoffs real architects make: static branch prediction is simple to implement but burns cycles on every taken branch; a branch predictor would recover those cycles at the cost of significantly more hardware and design complexity. Designing within those tradeoffs, rather than just reading about them, is what made this project valuable.</p>
         </div>
     </div>
+    <script src="project9/riscv-disasm.js"></script>
+    <script src="project9/pipeline-viz.js"></script>
 </body>
 </html>

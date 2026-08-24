@@ -1,0 +1,434 @@
+.pv-root {
+  margin: 32px 0;
+  --pv-outline: #6b6459;
+}
+
+.pv-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.pv-controls select,
+.pv-controls button {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.pv-controls input[type="range"] {
+  flex: 1 1 160px;
+  min-width: 120px;
+}
+.pv-cycle-label {
+  font-variant-numeric: tabular-nums;
+  min-width: 90px;
+}
+
+/* Static reference for the whole program, colored to match the exact same
+   per-instruction colors used on the wires/labels in the diagram below --
+   a stable legend so a color seen mid-pipeline can be tied back to a
+   specific source line instead of just tracked by eye cycle-to-cycle.
+   One instruction per line (vertical), flowing into multiple columns so a
+   long program doesn't turn into one very tall single column; whichever
+   instructions are actually somewhere in the pipeline this cycle are lit
+   up by render(), everything else sits dimmed. */
+.pv-program-legend {
+  columns: 15em;
+  column-gap: 20px;
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 4px 0 20px;
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.pv-legend-chip {
+  display: block;
+  break-inside: avoid;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 3px 8px;
+  margin: 1px 0;
+  border-radius: 4px;
+  border: 1.5px solid transparent;
+  opacity: 0.4;
+  transition: opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.pv-legend-chip.pv-legend-active {
+  opacity: 1;
+  border-color: currentColor;
+  background: var(--color-surface-alt);
+}
+.pv-legend-chip .pv-legend-num {
+  color: var(--color-muted);
+  font-weight: 400;
+  margin-right: 4px;
+}
+
+/* Full-bleed breakout: this section is allowed to be wider than the site's
+   normal 1000px content column so the whole pipeline fits without needing
+   horizontal scrolling. Works regardless of nesting depth under
+   .project-content because the -50vw/+50% math cancels the containing
+   block's own offset from the viewport edge. */
+.pv-diagram-wrap {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+  box-sizing: border-box;
+  padding: 16px clamp(12px, 3vw, 40px);
+  overflow: hidden;
+}
+
+.pv-diagram-scale {
+  /* height is set by JS to match the scaled diagram so the wrap doesn't
+     reserve unscaled empty space below the visible (scaled-down) content */
+  margin: 0 auto;
+  max-width: 1560px;
+}
+
+.pv-diagram {
+  position: relative;
+  width: 1560px;
+  height: 610px;
+  transform-origin: top left;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.pv-col-label {
+  position: absolute;
+  top: 0;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+}
+
+.pv-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1.75px solid var(--pv-outline);
+  border-radius: 6px;
+  background: var(--color-bg);
+  padding: 7px 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.pv-box-sub {
+  font-size: 10px;
+  color: var(--color-muted);
+  display: block;
+}
+.pv-box-tall {
+  flex-direction: column;
+  align-items: center;
+  padding-top: 14px;
+}
+.pv-box-mux {
+  font-size: 11px;
+  border-radius: 4px;
+  padding: 6px 5px;
+  white-space: nowrap;
+}
+.pv-box-alu {
+  font-weight: 700;
+  border-radius: 4px;
+  background: var(--color-surface-alt);
+}
+
+/* Trapezoid function blocks (muxes, ALU, imm gen, branch comp, adder, jump
+   unit) -- matches the classic pipelined-datapath diagram convention where
+   these are drawn as tapered/chevron shapes rather than plain rectangles.
+   A CSS clip-path clips away a normal border along with everything outside
+   the polygon, and faking the outline with stacked drop-shadows doesn't
+   work reliably (each drop-shadow filters the *output* of the previous one,
+   not the original shape, so they compound instead of framing it cleanly).
+   An inline SVG polygon is the correct tool here -- it has a real `stroke`
+   that follows the exact path, so the outline actually renders. */
+.pv-trap-r,
+.pv-trap-alu {
+  border: none !important;
+  background: transparent !important;
+}
+.pv-trap-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.pv-trap-svg polygon {
+  fill: var(--color-surface-alt);
+  stroke: var(--pv-outline);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.pv-trap-label {
+  position: relative;
+  z-index: 1;
+}
+
+.pv-frozen {
+  border-style: dashed !important;
+  border-color: #e5c07b !important;
+  box-shadow: 0 0 0 2px rgba(229, 192, 123, 0.35);
+}
+.pv-flushed {
+  opacity: 0.4;
+}
+
+/* Pipeline register: a tall bar behind the datapath, like a real pipelined
+   CPU diagram -- a fixed neutral blue since it represents the physical
+   register hardware itself. The instruction it currently holds is named by
+   the colored label below (see .pv-card) and the colored wires passing
+   through it, not by tinting the bar. */
+.pv-pipereg-bar {
+  position: absolute;
+  top: 12px;
+  width: 18px;
+  height: 480px;
+  background: rgba(150, 190, 230, 0.4);
+  border: 1px solid rgba(120, 160, 210, 0.6);
+  border-radius: 2px;
+  z-index: 0;
+}
+
+.pv-port-label {
+  position: absolute;
+  font-size: 10px;
+  color: var(--color-muted);
+  font-family: "Courier New", monospace;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.pv-port-label-r {
+  text-align: right;
+}
+
+.pv-pipereg-label {
+  position: absolute;
+  font-size: 10px;
+  color: var(--color-muted);
+  text-align: center;
+  z-index: 2;
+}
+/* Plain colored text where the pipeline register sits -- no box. The color
+   is the same one used on the wires carrying this instruction, so the label
+   reads as an annotation on the path rather than a separate UI element. */
+.pv-card {
+  position: absolute;
+  box-sizing: border-box;
+  font-size: 11px;
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.3;
+  word-break: break-word;
+  transition: color 0.15s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+.pv-card.pv-bubble {
+  color: var(--color-muted);
+  font-weight: 400;
+  font-style: italic;
+}
+.pv-card.pv-card-flushed {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+.pv-card.pv-card-frozen {
+  border-bottom: 2px dashed #e5c07b;
+  padding-bottom: 2px;
+}
+
+.pv-hazard-band {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 490px;
+  display: flex;
+  gap: 12px;
+}
+.pv-hazard-box {
+  flex: 1;
+  border: 1.5px dashed var(--color-border);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--color-muted);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+/* Lights up (solid accent border, tinted background) on cycles where this
+   unit is actually doing something -- forwarding a value, stalling the
+   pipeline, or flushing a wrong-path instruction -- so "never shows
+   anything" isn't true anymore even at a glance. */
+.pv-hazard-box.pv-hazard-active {
+  border-style: solid;
+  border-color: var(--color-accent);
+  background: rgba(30, 58, 95, 0.08);
+}
+.pv-hazard-info {
+  margin-top: 6px;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: left;
+}
+/* Control unit gets more room than the other hazard-mitigation boxes since it
+   shows a live grid of every decoded control signal for the current cycle --
+   real values from the trace, not just a label saying "there's a control unit". */
+.pv-hazard-box-control {
+  flex: 1.8;
+  text-align: left;
+}
+.pv-hazard-box-title {
+  font-size: 11px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+.pv-control-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px 14px;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+.pv-ctrl-pair {
+  display: flex;
+  justify-content: space-between;
+  white-space: nowrap;
+}
+.pv-ctrl-k {
+  color: var(--color-muted);
+}
+.pv-ctrl-v {
+  color: var(--color-text);
+  font-weight: 700;
+  margin-left: 8px;
+}
+
+.pv-svg-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1560px;
+  height: 610px;
+  pointer-events: none;
+}
+.pv-wire {
+  fill: none;
+  stroke: var(--color-muted);
+  stroke-width: 1.5;
+  opacity: 0.5;
+  transition: stroke 0.15s ease, stroke-width 0.15s ease, opacity 0.15s ease;
+}
+/* wires tagged with a pipeline stage carry that stage's current instruction
+   color each cycle (set inline by pipeline-viz.js) -- drawn a bit heavier
+   so the colored path reads as the primary visual, not the module boxes */
+.pv-wire[data-stage] {
+  stroke-width: 2.5;
+  opacity: 0.9;
+}
+.pv-wire.pv-wire-bubble {
+  opacity: 0.3;
+}
+.pv-wire[data-role] {
+  stroke-width: 2.5;
+}
+/* A round, filled connection point -- drawn as a near-zero-length line with a
+   thick round linecap, so it inherits the exact same per-cycle coloring as
+   every other .pv-wire with no JS changes. Used where a port's exact
+   position needs to be unambiguous at a glance (e.g. the ALU's two real
+   inputs), instead of relying on a fractional height alone to read clearly. */
+.pv-port-dot {
+  stroke-width: 6.5;
+  stroke-linecap: round;
+}
+/* Short stub + adjacent text label standing in for a long point-to-point
+   wire (branch/jump redirect back to PC Sel, write-back data/address back
+   to the register file) -- see md/diagram-design-principles.md, rule 3.
+   Colored the same way the wire it replaces would have been. */
+.pv-net-tag {
+  stroke-width: 2.5;
+}
+.pv-net-label {
+  position: absolute;
+  font-size: 9px;
+  color: var(--color-muted);
+  font-family: "Courier New", monospace;
+  white-space: nowrap;
+  pointer-events: none;
+  font-style: italic;
+}
+/* Forwarding paths are always drawn -- these are real, permanently-wired
+   datapaths (the forwarding muxes' extra inputs), not something that only
+   exists on the cycles it's used. Faint by default so they read as
+   "available" rather than competing with the always-solid main wires;
+   solid, thick, and colored when the trace says this path is actually
+   carrying a value this cycle. Solid (not dashed) even when inactive --
+   dashes are hard to trace by eye once several paths overlap. */
+.pv-fwd-line {
+  fill: none;
+  stroke: var(--pv-outline);
+  stroke-width: 1.5;
+  opacity: 0.3;
+  transition: opacity 0.15s ease, stroke-width 0.15s ease, stroke 0.15s ease;
+}
+.pv-fwd-line.pv-active {
+  stroke: var(--color-accent);
+  stroke-width: 3;
+  opacity: 0.95;
+}
+
+.pv-annotation {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-surface);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.pv-details {
+  margin-top: 12px;
+}
+.pv-details summary {
+  cursor: pointer;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+.pv-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 4px 16px;
+  margin-top: 10px;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.pv-field {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border);
+  padding: 2px 0;
+}
+.pv-field-k {
+  color: var(--color-muted);
+}
