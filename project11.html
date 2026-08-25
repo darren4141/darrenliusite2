@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry Pi Bootloader</title>
+    <link rel="stylesheet" href="projectstylesheet.css">
+    <style>
+        pre {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px;
+            font-size: 13px;
+            overflow-x: auto;
+            text-align: left;
+            line-height: 1.55;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+            text-align: left;
+            margin: 16px 0;
+        }
+        th {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            padding: 10px 12px;
+            font-weight: 600;
+        }
+        td {
+            border: 1px solid var(--color-border);
+            padding: 10px 12px;
+        }
+        tr:nth-child(even) td {
+            background-color: var(--color-surface);
+        }
+    </style>
+</head>
+<body>
+  <nav class="project-nav">
+    <a href="index.html" class="project-nav__name">Darren Liu</a>
+    <a href="index.html" class="project-nav__back">&#8592; All Projects</a>
+  </nav>
+  <div class="project-content">
+        <div class="project-text">
+            <h1>Raspberry Pi Bootloader</h1>
+            <h2 class="subtitle">2025 &ndash; 2026</h2>
+
+            <p>A bare-metal bootloader for the Raspberry Pi Compute Module 4 (BCM2711, Cortex-A72). It loads first, validates the kernel image, and hands off control to the RTOS &mdash; with support for firmware updates over UART (DFU) and image loading from eMMC. Written from scratch in C and ARM assembly.</p>
+            <p>The project is available on <a href="https://github.com/darren4141/rpitos" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
+
+            <h2>Startup Sequence</h2>
+            <p>The default RPi GPU firmware hands control to the reset handler at 0x8000 in HYP mode.</p>
+
+            <img src="project11\startupflow.png" alt="startup_flow", width="80%">
+
+            <h2>Memory Layout</h2>
+            <p>The boot chain is goes through three stages. They are all linked at fixed addresses so the next stage can be cleanly loaded.</p>
+            <p><strong>Bootstrap:</strong> The bootstrap image lives in the FAT32 partition provided by the RPi firmware and is loaded by the built-in GPU firmware. It brings up just enough (UART + eMMC) to CRC-validate and load the bootloader at 0x10000.</p>
+            <p><strong>Bootloader:</strong> The bootloader validates the app's CRC or alternatively it can trusts the preserved boot flags on a DFU-triggered warm reset. It is then responsible for loading the app. A 4 KB shared-flags region at 0x88000 carries the <code>BootFlags</code> struct (magic, reset reason, DFU-requested flag, CRC-valid flag).</p>
+            <p><strong>Application</strong> The app itself lives in one of two A/B slots on eMMC, so a bad flash can be rolled back without bricking the board.</p>
+            <img src="project11\memory_layout.png" alt="", width="90%">
+
+            <h2>Bootloader and DFU</h2>
+            <p>The bootloader image loads first and is responsible for validating and jumping to the kernel. On startup it checks the shared boot flags: if a firmware update was requested, it enters DFU mode; otherwise it validates the kernel CRC and jumps to 0x88400. The DFU protocol operates over UART and uses a simple framed packet format with a 32-bit CRC for error detection. A freshly flashed slot boots on trial, and the bootloader tracks trial attempts and watchdog reset counts in a small <code>WdtMeta</code> struct on eMMC, rolling back to the other A/B slot if the new one never confirms itself.</p>
+
+            <h3>Bootloader startup flow</h3>
+            <p>What bootloader_init() and bootloader_execute() do on every boot, from resolving the trial/watchdog state to jumping into the app:</p>
+            <img src="project11\bootloader_path.png" alt="", width="70%">
+
+            <p>The reset reason and DFU-request flags shared with the app at 0x88000:</p>
+<pre>typedef enum {
+  RESET_REASON_COLD     = 0,
+  RESET_REASON_WATCHDOG = 1,
+  RESET_REASON_SOFTWARE = 2,
+} ResetReason;
+
+typedef struct {
+  uint32_t magic;           // BOOT_FLAGS_MAGIC when valid
+  uint32_t reset_reason;    // ResetReason
+  uint32_t dfu_requested;   // non-zero -> enter DFU on next boot
+  uint32_t fw_crc_ok;       // non-zero -> bootloader verified firmware CRC
+} BootFlags;                // shared RAM at 0x88000 (BOOT_FLAGS_START_ADDR)</pre>
+
+            <p>The trial/watchdog metadata persisted on eMMC, read once at boot and updated by the trial and tolerance logic above:</p>
+<pre>typedef enum {
+  WATCHDOG_RESET_POLICY_FORCE_UPDATE = 0,  // force into the DFU receive loop
+  WATCHDOG_RESET_POLICY_JUMP_SLOT_B  = 1,  // reserved (not implemented)
+  WATCHDOG_RESET_POLICY_ROLLBACK     = 2,  // roll back to the other A/B slot
+} WatchdogResetPolicy;
+
+typedef struct {
+  uint32_t magic;
+  uint32_t wdt_reset_count;
+  int32_t  wdt_reset_tolerance;
+  uint32_t wdt_reset_policy;
+  uint32_t wdt_reset_reason;
+  uint32_t active_app_slot;    // APP_SLOT_A / APP_SLOT_B (see emmc.h)
+  uint32_t app_slot_trial;     // 1 = active slot unconfirmed (A/B trial)
+  uint32_t trial_boot_count;   // bootloader re-entries while on trial
+  uint32_t crc;                // CRC32 over all preceding fields; MUST be last
+} WdtMeta;                     // persisted in eMMC EMMC_SECTOR_METADATA</pre>
+
+            <h3>DFU packet format</h3>
+            <p>The framed packet format the DFU protocol uses over UART:</p>
+            <img src="project11\dfu_packet.png" alt="", width="80%">
+
+            <h3>DFU receive loop flow</h3>
+            <p>What dfu_receive() does with each packet as it comes in, from the trigger handshake through committing the new slot:</p>
+            <img src="project11\dfu_receive_flow.png" alt="", width="80%">
+
+            <h3>DFU &amp; startup process viewer on the RTOS client</h3>
+            <p>DFU is supported through scripts and also via the rtos client GUI. Here's a demo of how the DFU looks from the GUI. Notice how the designated app slot changes after flashing a new app.</p>
+            <img src="project11\rtos_client_booting.gif" alt="", width="90%">
+
+        </div>
+    </div>
+</body>
+</html>

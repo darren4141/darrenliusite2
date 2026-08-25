@@ -1,0 +1,3 @@
+[submodule "pipeline_cpu_submod"]
+	path = pipeline_cpu_submod
+	url = https://github.com/darren4141/Pipelined-CPU.git

@@ -12,8 +12,11 @@
 </head>
 
 <body>
+  <nav class="project-nav">
+    <a href="index.html" class="project-nav__name">Darren Liu</a>
+    <a href="index.html" class="project-nav__back">&#8592; All Projects</a>
+  </nav>
   <div class="project-content">
-    <a href="index.html" class="close-button">&times;</a>
     <div class="project-text">
       <h1>My PCB's</h1>
       <h3>(click + drag to rotate)</h3>
@@ -22,8 +25,7 @@
       <div class="pcb-viewer">
         <h2>RPI CM4 interface board</h2>
         <div class="image-container">
-          <img id="viewer5" src="PCBanimation/CM4_Interface_Board/board render0.webp" alt="CM4 Viewer" width="80%"
-            display="block" margin-left="auto">
+          <video id="viewer5" width="80%" style="display:block; margin:0 auto;"></video>
         </div>
         <button class="view-btn" onclick="resetViewer(4)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-4" onclick="toggleRotation(4)">Auto Rotate</button>
@@ -41,8 +43,7 @@
       <div class="pcb-viewer">
         <h2>Flight Controller Board V4</h2>
         <div class="image-container">
-          <img id="viewer6" src="PCBanimation/FC4_Board/board render1.webp" alt="FC4 Viewer" width="80%" display="block"
-            margin-left="auto">
+          <video id="viewer6" width="80%" style="display:block; margin:0 auto;"></video>
         </div>
         <button class="view-btn" onclick="resetViewer(5)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-5" onclick="toggleRotation(5)">Auto Rotate</button>
@@ -60,8 +61,7 @@
       <div class="pcb-viewer">
         <h2>Mini Flight Controller Board</h2>
         <div class="image-container">
-          <img id="viewer7" src="PCBanimation/Mini_FC_Board/board render0.webp" alt="FC4 Viewer" width="100%"
-            display="block" margin-left="auto">
+          <video id="viewer7" width="100%" style="display:block;"></video>
         </div>
         <button class="view-btn" onclick="resetViewer(6)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-6" onclick="toggleRotation(6)">Auto Rotate</button>
@@ -77,7 +77,7 @@
       <!-- STM32 -->
       <div class="pcb-viewer">
         <h2>STM32-Based Flight Controller</h2>
-        <img id="viewer1" src="PCBanimation/STM32_FC_Board/board render0.webp" alt="STM32 Viewer" width="100%">
+        <video id="viewer1" width="100%" style="display:block;"></video>
         <button class="view-btn" onclick="resetViewer(0)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-0" onclick="toggleRotation(0)">Auto Rotate</button>
         <button class="view-btn" onclick="showModal('modal-stm32-fc-schem')">View Schematic</button>
@@ -93,7 +93,7 @@
       <!-- ESP32 -->
       <div class="pcb-viewer">
         <h2>ESP32-Based Flight Controller</h2>
-        <img id="viewer2" src="PCBanimation/ESP32_FC_Board/board render213.webp" alt="ESP32 Viewer" width="100%">
+        <video id="viewer2" width="100%" style="display:block;"></video>
         <button class="view-btn" onclick="resetViewer(1)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-1" onclick="toggleRotation(1)">Auto Rotate</button>
         <button class="view-btn" onclick="showModal('modal-esp32-fc-schem')">View Schematic</button>
@@ -111,8 +111,7 @@
       <!-- Differential -->
       <div class="pcb-viewer">
         <h2>Differential Drivetrain Breakout Board</h2>
-        <img id="viewer3" src="PCBanimation/Diff_Breakout_Board/board render0.webp" alt="Differential Viewer"
-          width="100%">
+        <video id="viewer3" width="100%" style="display:block;"></video>
         <button class="view-btn" onclick="resetViewer(2)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-2" onclick="toggleRotation(2)">Auto Rotate</button>
         <button class="view-btn" onclick="showModal('modal-diff-schem')">View Schematic</button>
@@ -126,7 +125,7 @@
       <!-- Coil Driver -->
       <div class="pcb-viewer">
         <h2>Coil Driver Board</h2>
-        <img id="viewer4" src="PCBanimation/Coil_Driver_Board/board render0.webp" alt="Coil Driver Viewer" width="100%">
+        <video id="viewer4" width="100%" style="display:block;"></video>
         <button class="view-btn" onclick="resetViewer(3)">Reset View</button>
         <button class="view-btn" id="toggle-rotate-3" onclick="toggleRotation(3)">Auto Rotate</button>
         <button class="view-btn" onclick="showModal('modal-coil-schem')">View Schematic</button>

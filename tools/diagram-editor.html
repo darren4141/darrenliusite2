@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pipeline Diagram Editor</title>
+<style>
+  body { margin: 0; font-family: system-ui, sans-serif; background: #f4f4f2; color: #2a2a2a; }
+  #toolbar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 14px; background: #fff; border-bottom: 1px solid #ccc;
+  }
+  #toolbar button {
+    font-family: inherit; font-size: 13px; padding: 6px 12px;
+    border: 1px solid #999; border-radius: 5px; background: #f0f0f0; cursor: pointer;
+  }
+  #toolbar button:hover { background: #e4e4e4; }
+  #toolbar button:disabled { opacity: 0.4; cursor: default; }
+  #toolbar label { font-size: 13px; display: flex; align-items: center; gap: 4px; }
+  #status { font-size: 12px; color: #666; margin-left: auto; white-space: nowrap; }
+  #canvasWrap { padding: 16px; overflow: auto; }
+  svg#canvas { background: #fff; border: 1px solid #ccc; border-radius: 6px; display: block; }
+  .bar-rect { fill: rgba(150, 190, 230, 0.35); stroke: rgba(120, 160, 210, 0.7); stroke-width: 1; cursor: ew-resize; }
+  .bar-rect:hover { fill: rgba(150, 190, 230, 0.55); }
+  .bar-rect.dragging { fill: rgba(150, 190, 230, 0.7); }
+  .box-rect { fill: #f0ece2; stroke: #6b6459; stroke-width: 1.75; cursor: grab; }
+  .box-rect:hover { stroke: #c67; stroke-width: 2.5; }
+  .box-rect.dragging { cursor: grabbing; fill: #fce8d5; }
+  .box-label { font-size: 10px; fill: #333; pointer-events: none; user-select: none; text-anchor: middle; }
+  .wire-path { fill: none; stroke: #999; stroke-width: 1.5; opacity: 0.55; pointer-events: none; }
+  .wire-path.edited { stroke: #d33; opacity: 1; }
+  .wire-path.is-new { stroke: #2a8; opacity: 1; }
+  .seg-hit {
+    fill: none; stroke: transparent; stroke-width: 10; pointer-events: stroke;
+  }
+  .seg-hit.horiz { cursor: ns-resize; }
+  .seg-hit.vert { cursor: ew-resize; }
+  .seg-hit:hover { stroke: rgba(211, 51, 51, 0.16); }
+  .seg-hit.dragging { stroke: rgba(211, 51, 51, 0.28); }
+  .vertex {
+    fill: #fff; stroke: #37a; stroke-width: 1.5; r: 3.5; opacity: 0.35;
+    transition: opacity 0.1s; cursor: move;
+  }
+  .vertex:hover, .vertex.dragging { opacity: 1; fill: #37a; }
+  #coordReadout {
+    position: fixed; pointer-events: none; font: 11px monospace;
+    background: #222; color: #fff; padding: 2px 6px; border-radius: 3px;
+    display: none; z-index: 20;
+  }
+  #sidebar {
+    position: fixed; right: 16px; top: 70px; width: 260px;
+    background: #fff; border: 1px solid #ccc; border-radius: 6px; padding: 10px 12px;
+    font-size: 12px; max-height: 80vh; overflow: auto;
+  }
+  #sidebar h3 { margin: 0 0 6px; font-size: 13px; }
+  #editList div { padding: 2px 0; border-bottom: 1px solid #eee; font-family: monospace; font-size: 11px; word-break: break-all; }
+  #editList .tag { color: #2a8; font-weight: bold; }
+  #help { font-size: 11px; color: #666; max-width: 900px; padding: 0 16px 10px; }
+</style>
+</head>
+<body>
+  <div id="toolbar">
+    <button id="btnReload">Reload from project9.html</button>
+    <button id="btnExport">Export JSON</button>
+    <label>Import: <input type="file" id="fileImport" accept="application/json" style="font-size:12px;"></label>
+    <label><input type="checkbox" id="snapToggle" checked> Snap to 5px grid</label>
+    <button id="btnUndo" title="Ctrl+Z">Undo</button>
+    <button id="btnReset">Reset all edits</button>
+    <span id="status">loading…</span>
+  </div>
+  <p id="help">
+    Drag a <strong>box</strong> to move it. Drag the <strong>middle of a wire
+    segment</strong> (red highlight on hover) to slide the whole segment
+    perpendicular to itself, extending the segments on either side. Hover a
+    wire to reveal small <strong>vertex</strong> handles at each bend &mdash;
+    dragging one extends/shortens just the segment on that side, one axis at
+    a time; at a true corner, the far segment is preserved by quietly
+    inserting a collinear point, so it stays orthogonal.
+    <strong>Alt+drag a segment or a vertex</strong> to grow a brand new
+    branch off it (shown in green until exported) &mdash; it inherits that
+    wire's exact class/<code>data-stage</code>/<code>data-role</code>, so it
+    gets the same per-cycle coloring automatically, no extra setup. Branching
+    off a vertex starts exactly at that point; off a segment, at wherever
+    you clicked along it. Drag a
+    <strong>pipeline register bar</strong> left/right by its own body.
+    <strong>Ctrl+Z</strong> undoes the last action.
+  </p>
+  <div id="canvasWrap">
+    <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+  <div id="coordReadout"></div>
+  <div id="sidebar">
+    <h3>Pending edits</h3>
+    <div id="editList"><em>none yet</em></div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- state ----
+  const NATIVE_W = 1560, NATIVE_H = 610; // must match pipeline-viz.js
+  // Pipeline register bars aren't `.pv-box` elements and only have `left`
+  // set inline (top/width/height come from the .pv-pipereg-bar CSS rule) --
+  // mirror those fixed values here so the editor can draw them without
+  // having to load the stylesheet.
+  const BAR_TOP = 12, BAR_WIDTH = 18, BAR_HEIGHT = 480;
+
+  let originalItems = new Map();   // id -> {left, top, width, height, label, hasTop, kind}
+  let originalWires = [];          // [{d, cls, dataStage, dataRole}]
+  let itemState = new Map();       // id -> {left, top}  (current, live)
+  // wireState entries: {origD, points, cls, dataStage, dataRole, isNew, parentIdx}
+  // origD is null and isNew is true for wires created in-editor via branching.
+  let wireState = [];
+  let snap = true;
+
+  const svg = document.getElementById("canvas");
+  const status = document.getElementById("status");
+  const editList = document.getElementById("editList");
+  const coordReadout = document.getElementById("coordReadout");
+  const btnUndo = document.getElementById("btnUndo");
+
+  function setStatus(s) { status.textContent = s; }
+  function snapVal(v) { return snap ? Math.round(v / 5) * 5 : v; }
+
+  // ---- undo: snapshot whole state before any drag/import begins ----
+  const UNDO_LIMIT = 50;
+  let undoStack = [];
+  function cloneState() {
+    return {
+      itemState: new Map([...itemState].map(([k, v]) => [k, { ...v }])),
+      wireState: wireState.map((w) => ({
+        origD: w.origD, points: w.points.map((p) => ({ ...p })),
+        cls: w.cls, dataStage: w.dataStage, dataRole: w.dataRole,
+        isNew: w.isNew, parentIdx: w.parentIdx,
+      })),
+    };
+  }
+  function pushUndo() {
+    undoStack.push(cloneState());
+    if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+    btnUndo.disabled = false;
+  }
+  function undo() {
+    if (undoStack.length === 0) return;
+    const snap0 = undoStack.pop();
+    itemState = snap0.itemState;
+    wireState = snap0.wireState;
+    render();
+    setStatus("undone");
+    btnUndo.disabled = undoStack.length === 0;
+  }
+  window.addEventListener("keydown", (evt) => {
+    if ((evt.ctrlKey || evt.metaKey) && !evt.shiftKey && evt.key.toLowerCase() === "z") {
+      evt.preventDefault();
+      undo();
+    }
+  });
+  btnUndo.addEventListener("click", undo);
+
+  // ---- parsing project9.html ----
+  async function loadFromSource() {
+    setStatus("fetching ../project9.html …");
+    const res = await fetch("../project9.html");
+    if (!res.ok) throw new Error("fetch failed: " + res.status);
+    const text = await res.text();
+    const doc = new DOMParser().parseFromString(text, "text/html");
+    const diagram = doc.getElementById("pv-diagram-native");
+    if (!diagram) throw new Error('could not find #pv-diagram-native in project9.html');
+
+    originalItems = new Map();
+
+    diagram.querySelectorAll(".pv-pipereg-bar").forEach((el) => {
+      if (!el.id) return;
+      const left = parseFloat(el.style.left) || 0;
+      originalItems.set(el.id, {
+        left, top: BAR_TOP, width: BAR_WIDTH, height: BAR_HEIGHT,
+        label: "", hasTop: false, kind: "bar",
+      });
+    });
+
+    diagram.querySelectorAll(".pv-box").forEach((el) => {
+      if (!el.id) return;
+      const left = parseFloat(el.style.left) || 0;
+      const top = parseFloat(el.style.top) || 0;
+      const width = parseFloat(el.style.width) || 40;
+      const height = parseFloat(el.style.height) || 30;
+      const labelEl = el.querySelector(".pv-trap-label");
+      const label = (labelEl ? labelEl.textContent : el.textContent).trim().split("\n")[0].slice(0, 14);
+      originalItems.set(el.id, { left, top, width, height, label, hasTop: true, kind: "box" });
+    });
+
+    originalWires = [];
+    diagram.querySelectorAll("svg.pv-svg-overlay path").forEach((el) => {
+      const d = el.getAttribute("d");
+      if (!d) return;
+      originalWires.push({
+        d,
+        cls: el.getAttribute("class") || "pv-wire",
+        dataStage: el.getAttribute("data-stage"),
+        dataRole: el.getAttribute("data-role"),
+      });
+    });
+
+    resetState();
+    undoStack = [];
+    btnUndo.disabled = true;
+    render();
+    const nBars = [...originalItems.values()].filter((i) => i.kind === "bar").length;
+    const nBoxes = originalItems.size - nBars;
+    setStatus(`loaded ${nBoxes} boxes, ${nBars} bars, ${originalWires.length} wires`);
+  }
+
+  function resetState() {
+    itemState = new Map();
+    for (const [id, b] of originalItems) itemState.set(id, { left: b.left, top: b.top });
+    wireState = originalWires.map((w) => ({
+      origD: w.d, points: parsePath(w.d),
+      cls: w.cls, dataStage: w.dataStage, dataRole: w.dataRole,
+      isNew: false, parentIdx: null,
+    }));
+  }
+
+  function parsePath(d) {
+    const re = /(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g;
+    const pts = [];
+    let m;
+    while ((m = re.exec(d))) pts.push({ x: parseFloat(m[1]), y: parseFloat(m[2]) });
+    return pts;
+  }
+  function pointsToPath(points) {
+    return points.map((p, i) => `${i === 0 ? "M" : "L"} ${fmt(p.x)},${fmt(p.y)}`).join(" ");
+  }
+  function fmt(n) { return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100); }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  // ---- rendering ----
+  function render() {
+    svg.setAttribute("viewBox", `0 0 ${NATIVE_W} ${NATIVE_H}`);
+    svg.setAttribute("width", NATIVE_W);
+    svg.setAttribute("height", NATIVE_H);
+    svg.innerHTML = "";
+    const ns = svg.namespaceURI;
+
+    const grid = document.createElementNS(ns, "g");
+    for (let x = 0; x <= NATIVE_W; x += 50) grid.appendChild(line(x, 0, x, NATIVE_H));
+    for (let y = 0; y <= NATIVE_H; y += 50) grid.appendChild(line(0, y, NATIVE_W, y));
+    svg.appendChild(grid);
+
+    // bars: drawn first, behind everything, matching their real z-index:0
+    for (const [id, b0] of originalItems) {
+      if (b0.kind !== "bar") continue;
+      const cur = itemState.get(id);
+      const r = document.createElementNS(ns, "rect");
+      r.setAttribute("class", "bar-rect");
+      r.setAttribute("x", cur.left);
+      r.setAttribute("y", b0.top);
+      r.setAttribute("width", b0.width);
+      r.setAttribute("height", b0.height);
+      r.dataset.id = id;
+      r.addEventListener("pointerdown", onBarDown);
+      svg.appendChild(r);
+    }
+
+    // wires: visual path (non-interactive) + invisible thick per-segment
+    // hit-areas (1 DOF each). Vertex handles are collected here but appended
+    // last (after boxes, below) so a wire endpoint sitting right at a box's
+    // edge -- the common case, since that's where wires connect -- is still
+    // grabbable instead of the box's larger rect stealing the click.
+    const vertexEls = [];
+    wireState.forEach((w, wi) => {
+      const g = document.createElementNS(ns, "g");
+      g.setAttribute("class", "vertex-group");
+
+      const path = document.createElementNS(ns, "path");
+      const cls = ["wire-path"];
+      if (w.isNew) cls.push("is-new");
+      else if (w.origD !== pointsToPath(w.points)) cls.push("edited");
+      path.setAttribute("class", cls.join(" "));
+      path.setAttribute("d", pointsToPath(w.points));
+      g.appendChild(path);
+
+      for (let i = 0; i < w.points.length - 1; i++) {
+        const a = w.points[i], b = w.points[i + 1];
+        const horiz = Math.abs(a.y - b.y) <= Math.abs(a.x - b.x);
+        const seg = document.createElementNS(ns, "line");
+        seg.setAttribute("class", "seg-hit " + (horiz ? "horiz" : "vert"));
+        seg.setAttribute("x1", a.x); seg.setAttribute("y1", a.y);
+        seg.setAttribute("x2", b.x); seg.setAttribute("y2", b.y);
+        seg.dataset.wire = wi;
+        seg.dataset.i = i;
+        seg.dataset.horiz = horiz ? "1" : "0";
+        seg.addEventListener("pointerdown", onSegDown);
+        g.appendChild(seg);
+      }
+
+      svg.appendChild(g);
+
+      w.points.forEach((p, pi) => {
+        const c = document.createElementNS(ns, "circle");
+        c.setAttribute("class", "vertex");
+        c.setAttribute("cx", p.x);
+        c.setAttribute("cy", p.y);
+        c.dataset.wire = wi;
+        c.dataset.point = pi;
+        c.addEventListener("pointerdown", onVertexDown);
+        vertexEls.push(c);
+      });
+    });
+
+    // boxes
+    for (const [id, b0] of originalItems) {
+      if (b0.kind !== "box") continue;
+      const cur = itemState.get(id);
+      const g = document.createElementNS(ns, "g");
+      const r = document.createElementNS(ns, "rect");
+      r.setAttribute("class", "box-rect");
+      r.setAttribute("x", cur.left);
+      r.setAttribute("y", cur.top);
+      r.setAttribute("width", b0.width);
+      r.setAttribute("height", b0.height);
+      r.setAttribute("rx", 4);
+      r.dataset.id = id;
+      r.addEventListener("pointerdown", onBoxDown);
+      const t = document.createElementNS(ns, "text");
+      t.setAttribute("class", "box-label");
+      t.setAttribute("x", cur.left + b0.width / 2);
+      t.setAttribute("y", cur.top + b0.height / 2 + 3);
+      t.textContent = b0.label;
+      g.appendChild(r);
+      g.appendChild(t);
+      svg.appendChild(g);
+    }
+
+    // vertex handles last, on top of boxes -- see comment above
+    for (const c of vertexEls) svg.appendChild(c);
+
+    updateEditList();
+  }
+
+  function line(x1, y1, x2, y2) {
+    const l = document.createElementNS(svg.namespaceURI, "line");
+    l.setAttribute("x1", x1); l.setAttribute("y1", y1);
+    l.setAttribute("x2", x2); l.setAttribute("y2", y2);
+    l.setAttribute("stroke", "#eee"); l.setAttribute("stroke-width", "1");
+    return l;
+  }
+
+  function svgPoint(evt) {
+    const pt = svg.createSVGPoint();
+    pt.x = evt.clientX; pt.y = evt.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  // ---- box dragging (2 DOF) ----
+  let dragBox = null, dragBoxOffset = null;
+  function onBoxDown(evt) {
+    evt.preventDefault();
+    pushUndo();
+    const id = evt.target.dataset.id;
+    const cur = itemState.get(id);
+    const p = svgPoint(evt);
+    dragBox = id;
+    dragBoxOffset = { dx: p.x - cur.left, dy: p.y - cur.top };
+    evt.target.classList.add("dragging");
+    window.addEventListener("pointermove", onBoxMove);
+    window.addEventListener("pointerup", onBoxUp, { once: true });
+  }
+  function onBoxMove(evt) {
+    if (!dragBox) return;
+    const p = svgPoint(evt);
+    const cur = itemState.get(dragBox);
+    cur.left = snapVal(p.x - dragBoxOffset.dx);
+    cur.top = snapVal(p.y - dragBoxOffset.dy);
+    render();
+    showReadout(evt, `${dragBox}: left:${cur.left}px top:${cur.top}px`);
+  }
+  function onBoxUp() {
+    dragBox = null;
+    window.removeEventListener("pointermove", onBoxMove);
+    hideReadout();
+  }
+
+  // ---- bar dragging (1 DOF: horizontal only, no `top` to write back) ----
+  let dragBar = null, dragBarOffset = 0;
+  function onBarDown(evt) {
+    evt.preventDefault();
+    pushUndo();
+    const id = evt.target.dataset.id;
+    const cur = itemState.get(id);
+    const p = svgPoint(evt);
+    dragBar = id;
+    dragBarOffset = p.x - cur.left;
+    evt.target.classList.add("dragging");
+    window.addEventListener("pointermove", onBarMove);
+    window.addEventListener("pointerup", onBarUp, { once: true });
+  }
+  function onBarMove(evt) {
+    if (!dragBar) return;
+    const p = svgPoint(evt);
+    const cur = itemState.get(dragBar);
+    cur.left = snapVal(p.x - dragBarOffset);
+    render();
+    showReadout(evt, `${dragBar}: left:${cur.left}px`);
+  }
+  function onBarUp() {
+    dragBar = null;
+    window.removeEventListener("pointermove", onBarMove);
+    hideReadout();
+  }
+
+  // ---- wire segment dragging (1 DOF, extends neighbors automatically
+  // since they share the endpoints being moved) ----
+  let dragSeg = null;
+  function onSegDown(evt) {
+    evt.preventDefault();
+    evt.stopPropagation();
+    const wi = +evt.target.dataset.wire;
+    const i = +evt.target.dataset.i;
+    if (evt.altKey) { onBranchStart(evt, wi, i); return; }
+    pushUndo();
+    const horiz = evt.target.dataset.horiz === "1";
+    const w = wireState[wi];
+    const p = svgPoint(evt);
+    dragSeg = {
+      wi, i, horiz,
+      startVal: horiz ? w.points[i].y : w.points[i].x,
+      startPointer: horiz ? p.y : p.x,
+    };
+    evt.target.classList.add("dragging");
+    window.addEventListener("pointermove", onSegMove);
+    window.addEventListener("pointerup", onSegUp, { once: true });
+  }
+  function onSegMove(evt) {
+    if (!dragSeg) return;
+    const p = svgPoint(evt);
+    const cur = dragSeg.horiz ? p.y : p.x;
+    const newVal = snapVal(dragSeg.startVal + (cur - dragSeg.startPointer));
+    const w = wireState[dragSeg.wi];
+    const a = w.points[dragSeg.i], b = w.points[dragSeg.i + 1];
+    if (dragSeg.horiz) { a.y = newVal; b.y = newVal; }
+    else { a.x = newVal; b.x = newVal; }
+    render();
+    showReadout(evt, dragSeg.horiz ? `y: ${fmt(newVal)}` : `x: ${fmt(newVal)}`);
+  }
+  function onSegUp() {
+    dragSeg = null;
+    window.removeEventListener("pointermove", onSegMove);
+    hideReadout();
+  }
+
+  // ---- vertex dragging (1 DOF: extend/shorten one adjacent segment) ----
+  // A vertex sits between up to two segments. Moving it along an axis that
+  // matches one segment's own orientation extends/shortens *that* segment
+  // cleanly (only this point moves). The segment on the other side would
+  // otherwise go diagonal, so the first time the drag axis is resolved, a
+  // collinear point is quietly inserted at the vertex's *original* spot to
+  // absorb it -- the far segment ends up geometrically unchanged.
+  let dragVertex = null;
+  function segOrientation(p, q) {
+    // 'h' = horizontal (shared y, varies x), 'v' = vertical (shared x, varies y)
+    return p.y === q.y ? "h" : "v";
+  }
+  function onVertexDown(evt) {
+    evt.preventDefault();
+    evt.stopPropagation();
+    const wi = +evt.target.dataset.wire;
+    const pi = +evt.target.dataset.point;
+    if (evt.altKey) {
+      pushUndo();
+      const pt = wireState[wi].points[pi];
+      startBranch(wi, { x: pt.x, y: pt.y });
+      return;
+    }
+    pushUndo();
+    const p = svgPoint(evt);
+    dragVertex = {
+      wi, pi, resolved: false,
+      startPointer: p, // resolve axis after a small threshold of movement
+    };
+    evt.target.classList.add("dragging");
+    window.addEventListener("pointermove", onVertexMove);
+    window.addEventListener("pointerup", onVertexUp, { once: true });
+  }
+  function resolveVertexAxis(dv, dx, dy) {
+    const w = wireState[dv.wi];
+    const pt = w.points[dv.pi];
+    const hasPrec = dv.pi > 0;
+    const hasFoll = dv.pi < w.points.length - 1;
+    const prec = hasPrec ? w.points[dv.pi - 1] : null;
+    const foll = hasFoll ? w.points[dv.pi + 1] : null;
+    const precOri = prec ? segOrientation(prec, pt) : null;
+    const follOri = foll ? segOrientation(pt, foll) : null;
+    // the axis that extends a segment of orientation 'h' is 'x' (it varies in x);
+    // the axis that extends a segment of orientation 'v' is 'y'.
+    const precAxis = precOri === "h" ? "x" : precOri === "v" ? "y" : null;
+    const follAxis = follOri === "h" ? "x" : follOri === "v" ? "y" : null;
+    const wantAxis = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+
+    let axis = null, extend = null; // extend: 'prec' | 'foll' | 'both' (collinear passthrough)
+    if (!hasPrec) { axis = follAxis; extend = "foll"; }
+    else if (!hasFoll) { axis = precAxis; extend = "prec"; }
+    else if (precOri === follOri) { axis = precAxis; extend = "both"; }
+    else if (wantAxis === precAxis) { axis = precAxis; extend = "prec"; }
+    else if (wantAxis === follAxis) { axis = follAxis; extend = "foll"; }
+    else { axis = precAxis; extend = "prec"; } // fallback, shouldn't happen for orthogonal input
+
+    if (extend === "prec" && hasFoll) {
+      // preserve the following segment by inserting a collinear point at
+      // the vertex's original position, right after it
+      w.points.splice(dv.pi + 1, 0, { x: pt.x, y: pt.y });
+    } else if (extend === "foll" && hasPrec) {
+      // preserve the preceding segment the same way, inserting *before*
+      w.points.splice(dv.pi, 0, { x: pt.x, y: pt.y });
+      dv.pi += 1; // the dragged point shifted right by one
+    }
+    dv.axis = axis;
+    dv.resolved = true;
+  }
+  function onVertexMove(evt) {
+    if (!dragVertex) return;
+    const p = svgPoint(evt);
+    const dv = dragVertex;
+    if (!dv.resolved) {
+      const dx = p.x - dv.startPointer.x, dy = p.y - dv.startPointer.y;
+      if (Math.abs(dx) < 3 && Math.abs(dy) < 3) return; // wait for a real gesture
+      resolveVertexAxis(dv, dx, dy);
+    }
+    const w = wireState[dv.wi];
+    const pt = w.points[dv.pi];
+    pt[dv.axis] = snapVal(dv.axis === "x" ? p.x : p.y);
+    render();
+    showReadout(evt, `${dv.axis}: ${fmt(pt[dv.axis])}`);
+  }
+  function onVertexUp() {
+    dragVertex = null;
+    window.removeEventListener("pointermove", onVertexMove);
+    hideReadout();
+  }
+
+  // ---- branch creation (Alt+drag off an existing segment or vertex) ----
+  // Spawns a brand new 1-segment wire starting from a point on an existing
+  // wire -- either the clicked point on a segment (clamped onto its line)
+  // or a vertex's exact position -- inheriting that wire's class /
+  // data-stage / data-role exactly, so it gets the same per-cycle coloring
+  // with no extra setup. The new segment is axis-locked from the origin,
+  // same 1-DOF rule as everything else; whichever axis you drag further
+  // along wins, live, for the whole gesture. Released too short (an
+  // accidental click), it's discarded rather than left as clutter.
+  let dragBranch = null;
+  function startBranch(wi, origin) {
+    const w = wireState[wi];
+    const newWire = {
+      origD: null, isNew: true, parentIdx: wi,
+      cls: w.cls, dataStage: w.dataStage, dataRole: w.dataRole,
+      points: [{ ...origin }, { ...origin }],
+    };
+    wireState.push(newWire);
+    dragBranch = { newIdx: wireState.length - 1, origin };
+    window.addEventListener("pointermove", onBranchMove);
+    window.addEventListener("pointerup", onBranchUp, { once: true });
+  }
+  function onBranchStart(evt, wi, i) {
+    pushUndo();
+    const w = wireState[wi];
+    const a = w.points[i], b = w.points[i + 1];
+    const horiz = Math.abs(a.y - b.y) <= Math.abs(a.x - b.x);
+    const p = svgPoint(evt);
+    const origin = horiz
+      ? { x: snapVal(clamp(p.x, Math.min(a.x, b.x), Math.max(a.x, b.x))), y: a.y }
+      : { x: a.x, y: snapVal(clamp(p.y, Math.min(a.y, b.y), Math.max(a.y, b.y))) };
+    startBranch(wi, origin);
+  }
+  function onBranchMove(evt) {
+    if (!dragBranch) return;
+    const p = svgPoint(evt);
+    const { origin } = dragBranch;
+    const dx = p.x - origin.x, dy = p.y - origin.y;
+    dragBranch.rawLen = Math.abs(dx) + Math.abs(dy); // unsnapped, for the discard check below
+    const w = wireState[dragBranch.newIdx];
+    w.points[1] = Math.abs(dx) >= Math.abs(dy)
+      ? { x: snapVal(p.x), y: origin.y }
+      : { x: origin.x, y: snapVal(p.y) };
+    render();
+    showReadout(evt, `new branch: ${fmt(w.points[1].x - origin.x)}, ${fmt(w.points[1].y - origin.y)}`);
+  }
+  function onBranchUp() {
+    // Judge "too short, discard" on the raw drag distance, not the snapped
+    // point positions -- snapping can round a 1-2px accidental nudge up to
+    // a full grid step if the origin sits near a boundary, which would
+    // otherwise dodge this check entirely.
+    if (!dragBranch.rawLen || dragBranch.rawLen < 5) {
+      wireState.splice(dragBranch.newIdx, 1); // discard an accidental click
+      setStatus("branch too short, discarded");
+    } else {
+      setStatus("branch created");
+    }
+    dragBranch = null;
+    window.removeEventListener("pointermove", onBranchMove);
+    hideReadout();
+    render();
+  }
+
+  function showReadout(evt, text) {
+    coordReadout.style.display = "block";
+    coordReadout.style.left = evt.clientX + 14 + "px";
+    coordReadout.style.top = evt.clientY + 14 + "px";
+    coordReadout.textContent = text;
+  }
+  function hideReadout() { coordReadout.style.display = "none"; }
+
+  // ---- edit tracking / export ----
+  function computeEdits() {
+    const boxes = {};
+    for (const [id, b0] of originalItems) {
+      const cur = itemState.get(id);
+      const leftChanged = cur.left !== b0.left;
+      const topChanged = b0.hasTop && cur.top !== b0.top;
+      if (leftChanged || topChanged) {
+        boxes[id] = b0.hasTop ? { left: cur.left, top: cur.top } : { left: cur.left };
+      }
+    }
+    const wires = [];
+    const newWires = [];
+    wireState.forEach((w) => {
+      if (w.isNew) {
+        newWires.push({
+          after: pointsToPath(wireState[w.parentIdx].points),
+          cls: w.cls, dataStage: w.dataStage, dataRole: w.dataRole,
+          d: pointsToPath(w.points),
+        });
+        return;
+      }
+      const newD = pointsToPath(w.points);
+      if (newD !== w.origD) wires.push({ original: w.origD, updated: newD });
+    });
+    return { boxes, wires, newWires };
+  }
+
+  function updateEditList() {
+    const { boxes, wires, newWires } = computeEdits();
+    if (Object.keys(boxes).length === 0 && wires.length === 0 && newWires.length === 0) {
+      editList.innerHTML = "<em>none yet</em>";
+      return;
+    }
+    let html = "";
+    for (const [id, v] of Object.entries(boxes)) {
+      const parts = [`left:${v.left}px`];
+      if ("top" in v) parts.push(`top:${v.top}px`);
+      html += `<div><strong>${id}</strong><br>${parts.join(" ")}</div>`;
+    }
+    wires.forEach((w, i) => {
+      html += `<div><strong>wire ${i + 1}</strong><br>${w.updated}</div>`;
+    });
+    newWires.forEach((w, i) => {
+      const tag = w.dataStage ? `data-stage="${w.dataStage}"` : w.dataRole ? `data-role="${w.dataRole}"` : "(untagged)";
+      html += `<div><span class="tag">+new ${i + 1}</span> <em>${tag}</em><br>${w.d}</div>`;
+    });
+    editList.innerHTML = html;
+  }
+
+  // ---- toolbar actions ----
+  document.getElementById("btnReload").addEventListener("click", () => {
+    loadFromSource().catch((e) => setStatus("error: " + e.message));
+  });
+
+  document.getElementById("btnExport").addEventListener("click", () => {
+    const edits = computeEdits();
+    const json = JSON.stringify(edits, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "diagram-edits.json";
+    a.click();
+    setStatus(`exported ${Object.keys(edits.boxes).length} position edits, ${edits.wires.length} wire edits, ${edits.newWires.length} new wires`);
+  });
+
+  document.getElementById("fileImport").addEventListener("change", (evt) => {
+    const file = evt.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        pushUndo();
+        const edits = JSON.parse(reader.result);
+        for (const [id, v] of Object.entries(edits.boxes || {})) {
+          if (itemState.has(id)) {
+            const cur = itemState.get(id);
+            cur.left = v.left;
+            if ("top" in v) cur.top = v.top;
+          }
+        }
+        for (const w of edits.wires || []) {
+          const target = wireState.find((ws) => !ws.isNew && ws.origD === w.original);
+          if (target) target.points = parsePath(w.updated);
+        }
+        for (const nw of edits.newWires || []) {
+          const parentIdx = wireState.findIndex((ws) => pointsToPath(ws.points) === nw.after);
+          wireState.push({
+            origD: null, isNew: true, parentIdx: parentIdx === -1 ? 0 : parentIdx,
+            cls: nw.cls, dataStage: nw.dataStage, dataRole: nw.dataRole,
+            points: parsePath(nw.d),
+          });
+        }
+        render();
+        setStatus("imported edits");
+      } catch (e) {
+        setStatus("import error: " + e.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById("btnReset").addEventListener("click", () => {
+    pushUndo();
+    resetState();
+    render();
+    setStatus("edits reset");
+  });
+
+  document.getElementById("snapToggle").addEventListener("change", (evt) => {
+    snap = evt.target.checked;
+  });
+
+  btnUndo.disabled = true;
+  loadFromSource().catch((e) => setStatus("error: " + e.message));
+})();
+</script>
+</body>
+</html>

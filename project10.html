@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bare-Metal RTOS for Raspberry Pi CM4</title>
+    <link rel="stylesheet" href="projectstylesheet.css">
+    <style>
+        pre {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px;
+            font-size: 13px;
+            overflow-x: auto;
+            text-align: left;
+            line-height: 1.55;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+            text-align: left;
+            margin: 16px 0;
+        }
+        th {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            padding: 10px 12px;
+            font-weight: 600;
+        }
+        td {
+            border: 1px solid var(--color-border);
+            padding: 10px 12px;
+        }
+        tr:nth-child(even) td {
+            background-color: var(--color-surface);
+        }
+
+        /* === SYSTEM TREE === */
+        .system-tree {
+            margin: 36px 0 44px;
+            text-align: left;
+        }
+        .tier {
+            margin-bottom: 4px;
+        }
+        .tier--libraries      { --tier-hue: #4B6B8A; }
+        .tier--kernel-objects { --tier-hue: #5E7A63; }
+        .tier--drivers        { --tier-hue: #8A6D4B; }
+        .tier--base           { --tier-hue: #1E3A5F; }
+        .tier--multicore      { --tier-hue: #6B4B6E; }
+
+        .tier__band {
+            background-color: var(--tier-hue);
+            color: #FBF8F3;
+            padding: 14px 20px;
+            border-radius: 8px 8px 0 0;
+        }
+        .tier__band-title {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        .tier__grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 1px;
+            background-color: var(--color-border);
+            border: 1px solid var(--color-border);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            overflow: hidden;
+        }
+        .comp-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            text-align: left;
+            font-family: var(--font-primary);
+            background-color: color-mix(in srgb, var(--tier-hue) 7%, var(--color-surface));
+            border: none;
+            padding: 16px 18px;
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .comp-box:hover, .comp-box:focus-visible {
+            background-color: color-mix(in srgb, var(--tier-hue) 18%, var(--color-surface));
+            transform: translateY(-3px);
+            box-shadow: var(--shadow);
+            z-index: 1;
+            outline: none;
+        }
+        .comp-box__title {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--color-text);
+        }
+        .comp-box__hint {
+            font-size: 11.5px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            color: var(--tier-hue);
+            opacity: 0;
+            transform: translateX(-4px);
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            white-space: nowrap;
+        }
+        .comp-box:hover .comp-box__hint,
+        .comp-box:focus-visible .comp-box__hint {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .tier-connector {
+            display: flex;
+            justify-content: center;
+            padding: 6px 0;
+            color: var(--color-muted);
+        }
+        .tier-connector__arrow {
+            font-size: 15px;
+            line-height: 1;
+        }
+
+        /* === NODE MODAL (fullscreen mini project page) === */
+        .node-modal[hidden] { display: none; }
+        .node-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background-color: var(--color-bg);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .node-modal__topbar {
+            position: sticky;
+            top: 0;
+            height: var(--nav-height);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            background-color: var(--color-bg);
+            border-bottom: 1px solid var(--color-border);
+            z-index: 1;
+        }
+        .node-modal__eyebrow {
+            font-family: var(--font-primary);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            color: var(--color-muted);
+        }
+        .node-modal__close {
+            font-family: var(--font-primary);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--color-accent);
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 0;
+            transition: opacity 0.2s ease;
+        }
+        .node-modal__close:hover, .node-modal__close:focus-visible {
+            opacity: 0.7;
+        }
+        .node-modal__inner {
+            max-width: 900px;
+            margin: 40px auto 64px;
+            padding: 40px;
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .node-modal__inner h2 {
+            font-family: var(--font-display);
+            font-size: 30px;
+            margin: 0 0 4px 0;
+        }
+        .node-modal__tag {
+            display: block;
+            width: fit-content;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            color: #fff;
+            background-color: var(--tier-hue, var(--color-accent));
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin: 0 auto 14px 0;
+        }
+        .node-modal__inner h3 {
+            font-family: var(--font-primary);
+            font-size: 19px;
+            margin: 30px 0 10px 0;
+        }
+        .node-modal__inner p {
+            margin: 0 0 14px 0;
+            font-size: 16px;
+            line-height: 1.7;
+            text-align: center;
+            color: var(--color-text);
+        }
+        .node-modal__lede {
+            font-size: 17px;
+            color: var(--color-muted);
+        }
+        .node-modal__wip {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #8A5A2B;
+            background-color: #F4E3C8;
+            border: 1px solid #E0C084;
+            border-radius: 4px;
+            padding: 3px 9px;
+            margin-bottom: 14px;
+        }
+        @media (max-width: 768px) {
+            .node-modal__topbar { padding: 0 20px; }
+            .node-modal__inner { margin: 20px 12px 48px; padding: 24px 20px; }
+            .node-modal__inner h2 { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+  <nav class="project-nav">
+    <a href="index.html" class="project-nav__name">Darren Liu</a>
+    <a href="index.html" class="project-nav__back">&#8592; All Projects</a>
+  </nav>
+  <div class="project-content">
+        <div class="project-text">
+            <h1>Bare-Metal RTOS for Raspberry Pi CM4</h1>
+            <h2 class="subtitle">2026</h2>
+
+            <p>I built a preemptive real-time operating system from scratch in C and ARM assembly, running on a Raspberry Pi Compute Module 4 (BCM2711, Cortex-A72). The OS runs entirely bare-metal and uses a priority-based preemptive scheduler, IRQ-driven context switching, hardware drivers, and synchronization primitives.</p>
+            <p>See the code on <a href="https://github.com/darren4141/rpitos" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
+
+            <h2>Architecture</h2>
+            <p>I organized rpitos into the five tiers below, each one built with modularity in mind and on top of the tier beneath it.</p>
+            <p><strong>Base Kernel:</strong> The base kernel (scheduler, tasks, heap) manages CPU time and memory.</p>
+            <p><strong>Drivers:</strong> responsible for interfacing with hardware. The RTOS has drivers for serial communication, memory management, interrupt registration and handling, and internal timing, watchdog, and reset behavior.</p>
+            <p><strong>Kernel objects:</strong> common synchronization primitives (mutex, semaphore, queue, software timer). These are the only things allowed to actually block a task, and they're built entirely out of the scheduler's own primitives.</p>
+            <p><strong>Libraries:</strong> Generic libraries that sit on top of everything and only ever touch the RTOS through its published API, the same as application code would.</p>
+            <p><strong>Multicore support: </strong> Code to enable the multicore functionality of the RPi 4 is layered in sideways. rpitos uses a bound-multiprocessing (BMP) model, where each task is pinned to the core it was created on and never migrates. This means every core owns a completely independent scheduler instance, ready lists, and tick source. Most of the kernel has no idea multicore exists at all as each core runs as its own isolated system. Synchronization primitives are able to span cores and do so by gating with spinlocks.</p>
+
+            <div class="system-tree">
+                <div class="tier tier--libraries">
+                    <div class="tier__band">
+                        <div class="tier__band-title">Libraries</div>
+                    </div>
+                    <div class="tier__grid">
+                        <button class="comp-box" onclick="openNode('delay')">
+                            <span class="comp-box__title">Delay</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('status')">
+                            <span class="comp-box__title">Status</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tier-connector">
+                    <span class="tier-connector__arrow">&#8595;</span>
+                </div>
+
+                <div class="tier tier--kernel-objects">
+                    <div class="tier__band">
+                        <div class="tier__band-title">Kernel Objects</div>
+                    </div>
+                    <div class="tier__grid">
+                        <button class="comp-box" onclick="openNode('mutex')">
+                            <span class="comp-box__title">Mutex</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('semaphore')">
+                            <span class="comp-box__title">Semaphore</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('queue')">
+                            <span class="comp-box__title">Queue</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('sw-timer')">
+                            <span class="comp-box__title">Software Timer</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tier-connector">
+                    <span class="tier-connector__arrow">&#8595;</span>
+                </div>
+
+                <div class="tier tier--drivers">
+                    <div class="tier__band">
+                        <div class="tier__band-title">Drivers</div>
+                    </div>
+                    <div class="tier__grid">
+                        <button class="comp-box" onclick="openNode('uart')">
+                            <span class="comp-box__title">UART</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('gpio')">
+                            <span class="comp-box__title">GPIO</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('crc')">
+                            <span class="comp-box__title">CRC</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('dma')">
+                            <span class="comp-box__title">DMA</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('emmc')">
+                            <span class="comp-box__title">eMMC</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('gic-interrupts')">
+                            <span class="comp-box__title">GIC &amp; Interrupts</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('gentimer')">
+                            <span class="comp-box__title">Generic Timer</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('i2c')">
+                            <span class="comp-box__title">I2C</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('i2s')">
+                            <span class="comp-box__title">I2S</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('jtag')">
+                            <span class="comp-box__title">JTAG</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('mailbox')">
+                            <span class="comp-box__title">Mailbox</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('pwm')">
+                            <span class="comp-box__title">PWM (PCA9685)</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('reset')">
+                            <span class="comp-box__title">Reset</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('watchdog')">
+                            <span class="comp-box__title">Watchdog</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('cprman')">
+                            <span class="comp-box__title">CPRMAN</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tier-connector">
+                    <span class="tier-connector__arrow">&#8595;</span>
+                </div>
+
+                <div class="tier tier--base">
+                    <div class="tier__band">
+                        <div class="tier__band-title">Base of RTOS / Kernel</div>
+                    </div>
+                    <div class="tier__grid">
+                        <button class="comp-box" onclick="openNode('scheduler')">
+                            <span class="comp-box__title">Scheduler</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('tasks')">
+                            <span class="comp-box__title">Tasks</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('heap')">
+                            <span class="comp-box__title">Heap</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tier-connector">
+                    <span class="tier-connector__arrow">&#8595;</span>
+                </div>
+
+                <div class="tier tier--multicore">
+                    <div class="tier__band">
+                        <div class="tier__band-title">Multicore</div>
+                    </div>
+                    <div class="tier__grid">
+                        <button class="comp-box" onclick="openNode('companion-core')">
+                            <span class="comp-box__title">Companion Core</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                        <button class="comp-box" onclick="openNode('spinlock')">
+                            <span class="comp-box__title">Spinlock</span>
+                            <span class="comp-box__hint">View details &rarr;</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <h2>Surviving a bad update</h2>
+            <p>I didn't want a bad firmware flash to be able to brick the board, so the RTOS and the bootloader cooperate through a small piece of shared state on eMMC instead of just trusting that a freshly flashed app works. The app lives in one of two A/B slots; every time a new slot gets flashed, the bootloader marks it "on trial" before jumping to it. If that app can prove it's alive, the trial (it calls wdt_meta_confirm_slot()) after it's been healthy for a configured amount of time. The flag clears and that slot becomes the new default. If it can't, because it crashed, hung, or never got that far, the watchdog resets the board, the reset count in the shared metadata climbs, and once that count passes a configured tolerance the bootloader stops trusting the new slot and falls back to the last one that confirmed itself.</p>
+
+            <h2>Visualizing the RTOS with the telemetry client</h2>
+            <p>An RTOS with no display is hard to introspect by staring at a UART console, so I built a companion desktop app: a Rust/egui GUI that connects to a running board over its own dedicated telemetry UART channel. It decodes a small framed wire protocol into live scheduler and task state.</p>
+            <p>The client renders scheduler dynamics and per-core status in real time, tracks which tasks are currently blocked and on what, and includes its own DFU panel that drives the exact same firmware-update protocol the bootloader implements, so I can push a full update from the host GUI instead of a separate command-line tool.</p>
+
+            <h3>Task Timing breakdown, ready and blocked lists, timing diagram</h3>
+            <img src="project10\rtos_client_core0.gif" alt="", width="90%">
+
+            <h3>Sample: Companion cores alternating</h3>
+            <img src="project10\rtos_client_comp_cores.gif" alt="", width="90%">
+
+            <h3>Synchronization primitives viewer</h3>
+            <img src="project10\rtos_client_syncs.gif" alt="", width="90%">
+
+            <h3>Broadcast protocol</h3>
+            <p>The telemetry link is TX-only and one-way: the device streams framed packets out over a dedicated PL011 channel (<code>UART_CHANNEL_TELEMETRY</code>, TXD5 on GPIO12/<code>ALT4</code>, no RX pin) at 921600 baud, and nothing on the device ever blocks waiting for the host to acknowledge anything — there's no ACK/NACK in the protocol at all. Every packet uses the same frame, defined in <code>source/telemetry/telemetry.h</code> and built by <code>telemetry_send_framed()</code> in <code>source/telemetry/telemetry_frame.c</code>: <code>[0xA5 magic][type:1][seq:1][len_msb:1][len_lsb:1][payload:len][crc32:4 LE][0x5A trailer]</code>, with the CRC32 covering everything from the magic byte through the payload. <code>seq</code> wraps at 256 per packet type, which is what lets the host notice a dropped or corrupted frame without any retransmit scheme.</p>
+            <img src="project10\telemetry_packet.png" alt="", width="80%">
+
+            <p>What the device actually decides to broadcast is deliberately raw. It's a ~10&nbsp;Hz heartbeat counter, one <code>PKT_TASK_CREATED</code> per task (id, core, priority, name) fired from <code>task_create()</code>, one <code>PKT_TICK_STATE</code> per core per scheduler tick (queued into a per-core ring buffer by <code>telemetry_report_tick_state()</code> and drained by <code>telemetry_publisher_task</code>, so the tick handler itself never touches the UART), plus block/unblock, sync-object-created, and mutex-ownership-changed events as they happen. The full packet layout table and the reasoning for exactly these hook points live in <code>source/telemetry/docs.md</code>. Notably absent from the wire: per-task CPU time, ready/blocked lists, or anything that looks like the timing diagram above — the device only ever reports raw ids, states, and counters as they change.</p>
+            <p>All of that reconstruction is the client's job. The <code>telemetry-protocol</code> crate (<code>client/telemetry-protocol/src/packet.rs</code>) mirrors the device-side enums byte-for-byte and decodes each validated frame into a typed <code>Packet</code>, and <code>telemetry-gui</code> (<code>scheduler_dynamics.rs</code>, <code>time_breakdown.rs</code>, <code>blocked_tracker.rs</code>, <code>sync_view.rs</code>) turns that raw event stream into the ready/blocked lists, per-task timing breakdown, and sync-ownership graph shown above — every bit of derived state in the GUI is something the firmware never had to compute.</p>
+            <img src="project10\telemetry_transmission_flow.png" alt="", width="80%">
+            
+            <h3>Hardware setup</h3>
+            <img src="project10\hardware_setup.jpg" alt="", width="60%">
+
+        </div>
+    </div>
+
+    <!-- ============ LIBRARIES ============ -->
+    <div class="node-modal" id="modal-delay" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Library &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('delay')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#4B6B8A;">
+            <span class="node-modal__tag">Library</span>
+            <h2>Delay</h2>
+            <p class="node-modal__lede">Non-blocking delay library</p>
+            <h3>Overview</h3>
+            <p>The delay library provides a pure NOP busy-wait delay function as well as a timed delay that uses the scheduler tick count. Neither yields the CPU to another task.</p>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>delay_init</td><td><code>StatusCode delay_init(volatile uint64_t *p_tick_count);</code></td><td>Link the delay library to the scheduler's shared tick counter.</td></tr>
+                <tr><td>delay_cycles</td><td><code>void delay_cycles(uint64_t cycles);</code></td><td>Busy-wait for the given number of CPU cycles.</td></tr>
+                <tr><td>delay_ms</td><td><code>void delay_ms(uint64_t ticks);</code></td><td>Busy-wait for the given number of scheduler ticks (not wall-clock ms).</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-status" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Library &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('status')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#4B6B8A;">
+            <span class="node-modal__tag">Library</span>
+            <h2>Status</h2>
+            <p class="node-modal__lede">The single <code>StatusCode</code> enum that almost every function in the kernel returns.</p>
+        </div>
+    </div>
+
+    <!-- ============ KERNEL OBJECTS ============ -->
+    <div class="node-modal" id="modal-mutex" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Kernel Object &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('mutex')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#5E7A63;">
+            <span class="node-modal__tag">Kernel Object</span>
+            <h2>Mutex</h2>
+            <p class="node-modal__lede">A priority-inheritance mutex implementation.</p>
+            <h3>How it works</h3>
+            <p>Each <code>Mutex</code> carries its own <code>Spinlock</code> since a waiter can live on a different core than the owner. <code>mutex_lock()</code> is managed by the scheduler systick. If inheritance is enabled and the caller is higher priority than the current owner, the owner's priority is boosted for as long as it holds the mutex.</p>
+
+<pre>
+struct Mutex {
+  MutexState         state;               // locked or unlocked
+  TaskControlBlock  *mutex_owner;         // task currently holding it
+  List               mutex_blocked_list;  // tasks waiting
+  uint8_t            inheritance_enabled; // priority inheritance on/off
+  TaskPriorityLevel  inherited_priority;  // highest priority among current waiters
+  Spinlock           lock;                // cross-core lock on this struct
+#ifdef RTOS_TELEMETRY
+  uint16_t           sync_id;             // telemetry builds only
+#endif
+};
+</pre>
+
+            <h3>Mutex control flow</h3>
+            <p>What mutex_lock() and mutex_unlock() do on every call:</p>
+            <img src="project10\mutex\mutex_flow.png" alt="mutex_flow", width="80%">
+
+            <h3>Priority inheritance example</h3>
+            <p>A worked example of the boost across two cores, Task A holding the mutex on core 0 while a higher-priority Task B blocks on core 1:</p>
+            <img src="project10\mutex\prio_inheritance_flow.png" alt="prio_inheritance_flow", width="80%">
+
+            <h3>Finding the next owner</h3>
+            <p>mutex_unlock() finds the next owner and the second-highest waiting priority in a single pass over the blocked list:</p>
+<pre>
+while (iter != NULL) {
+  if (iter->owner->priority > best->owner->priority) {
+    if (best->owner->priority > second_best) second_best = best->owner->priority;
+    best = iter;
+  } else {
+    if (iter->owner->priority > second_best) second_best = iter->owner->priority;
+  }
+  iter = iter->next;
+}
+</pre>
+
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>mutex_init</td><td><code>void mutex_init(Mutex *mtx, const char *name);</code></td><td>Initialize a mutex to the unlocked state.</td></tr>
+                <tr><td>mutex_set_inheritance</td><td><code>StatusCode mutex_set_inheritance(Mutex *mtx, uint8_t enable);</code></td><td>Enable or disable priority inheritance for this mutex.</td></tr>
+                <tr><td>mutex_lock</td><td><code>StatusCode mutex_lock(Mutex *mtx, int64_t timeout_ms);</code></td><td>Lock the mutex, blocking up to timeout_ms; boosts the owner's priority if inheritance is enabled and the caller is higher priority.</td></tr>
+                <tr><td>mutex_unlock</td><td><code>void mutex_unlock(Mutex *mtx);</code></td><td>Unlock the mutex, restoring the owner's original priority and waking the next waiter.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-semaphore" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Kernel Object &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('semaphore')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#5E7A63;">
+            <span class="node-modal__tag">Kernel Object</span>
+            <h2>Semaphore</h2>
+            <p class="node-modal__lede">A counting semaphore for signaling between tasks and interrupt handlers.</p>
+            <h3>Overview</h3>
+            <p><code>semaphore_take()</code> blocks by adding the task to a FIFO list and blocking until something wakes it - either <code>semaphore_give()</code> or a timeout from the scheduler tick. <code>semaphore_give()</code> hands its count directly to the next waiting task instead of incrementing the counter and letting it race to claim it. <code>give()</code> also locks the waiting task's own core, not the caller's core, so it's safe to call from a task or ISR on one core to wake a task sitting on another core's ready list.</p>
+
+<pre>
+struct Semaphore {
+  uint32_t max_count;                // ceiling
+  uint32_t count;                    // current value
+  List     semaphore_blocked_list;   // FIFO wait list
+  Spinlock lock;                     // cross-core lock on this struct
+#ifdef RTOS_TELEMETRY
+  uint16_t sync_id;                  // telemetry builds only
+#endif
+};
+</pre>
+
+            <h3>Semaphore take & give execution</h3>
+            <img src="project10\semaphore\semaphore_flow.png" alt="semaphore_flow", width="80%">
+
+            <h3>Semaphore take with timeout</h3>
+            <p>semaphore_take() can also be called with a timeout parameter so that the caller is guaranteed to return after a certain amount of time. If the timeout expires without the semaphore being acquired, then semaphore_give() will return E_TIMED_OUT</p>
+            <img src="project10\semaphore\semaphore_timeout_flow.png" alt="semaphore_timeout_flow", width="80%">
+
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>semaphore_init</td><td><code>void semaphore_init(Semaphore *smph, uint32_t max_count, uint32_t initial_count, const char *name);</code></td><td>Initialize a counting semaphore with the given max and starting count.</td></tr>
+                <tr><td>semaphore_init_with_parent</td><td><code>void semaphore_init_with_parent(Semaphore *smph, uint32_t max_count, uint32_t initial_count, const char *name, uint16_t parent_sync_id);</code></td><td>(RTOS_TELEMETRY builds) Same as semaphore_init(), plus a parent-sync link used internally by queue.</td></tr>
+                <tr><td>semaphore_take</td><td><code>StatusCode semaphore_take(Semaphore *smph, int64_t timeout_ms);</code></td><td>Take one count, blocking up to timeout_ms if none are available.</td></tr>
+                <tr><td>semaphore_give</td><td><code>StatusCode semaphore_give(Semaphore *smph);</code></td><td>Give one count back, waking the longest-waiting blocked task if any.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-queue" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Kernel Object &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('queue')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#5E7A63;">
+            <span class="node-modal__tag">Kernel Object</span>
+            <h2>Queue</h2>
+            <p class="node-modal__lede">A fixed-capacity message queue built on top of two semaphores.</p>
+            <h3>Overview</h3>
+            <p><code>queue_init()</code> allocates its backing buffer with one <code>heap_malloc()</code> call, then sets up two semaphores: <code>space_available</code> starts at full capacity, <code>data_available</code> starts at 0 — the standard producer/consumer pattern. <code>queue_send()</code>/<code>queue_recv()</code> copy an item in or out byte-by-byte (no libc, no memcpy in this freestanding build) and have no wait-list logic of their own; both blocking paths go through semaphore.</p>
+
+<pre>
+struct Queue {
+  uint8_t  *buf;                   // backing buffer, capacity * item_size bytes
+  uint32_t  head;                  // write index
+  uint32_t  tail;                  // read index
+  uint32_t  capacity;              // max number of items in the queue
+  uint32_t  item_size;             // bytes per item
+
+  Semaphore space_available;       // gates queue_send
+  Semaphore data_available;        // gates queue_recv
+
+  Spinlock  lock;                  // guards the byte-copy step
+#ifdef RTOS_TELEMETRY
+  uint16_t  sync_id;                // telemetry builds only
+#endif
+};
+</pre>
+
+            <h3>Ring buffer operation:</h3>
+            <img src="project10\queue\queue_ring_buffer_diagram.png" alt="", width="80%">
+
+            <h3>Queue send/receive operations</h3>
+
+            <img src="project10\queue\queue_flow.png" alt="", width="80%">
+
+            <h3>Sized for any item type</h3>
+            <p><code>queue_init()</code> takes <code>item_size</code> as a parameter and allocates <code>capacity * item_size</code> bytes for the backing buffer. <code>queue_send()</code>/<code>queue_recv()</code> don't know or care what type is being queued — <code>src</code> and <code>dst</code> are <code>void *</code>, and both copy exactly <code>item_size</code> bytes to or from the buffer at head/tail's offset. The same <code>Queue</code> works for single bytes or large structs; only the numbers passed to <code>queue_init()</code> change.</p>
+
+            <img src="project10\queue\queue_sizing.png" alt="", width="80%">
+
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>queue_init</td><td><code>StatusCode queue_init(Queue *q, uint32_t capacity, uint32_t item_size, const char *name);</code></td><td>Initialize a fixed-capacity message queue, allocating its backing buffer from the kernel heap.</td></tr>
+                <tr><td>queue_send</td><td><code>StatusCode queue_send(Queue *q, const void *src, int64_t timeout_ms);</code></td><td>Copy one item into the queue, blocking up to timeout_ms if it's full.</td></tr>
+                <tr><td>queue_recv</td><td><code>StatusCode queue_recv(Queue *q, void *dst, int64_t timeout_ms);</code></td><td>Copy one item out of the queue, blocking up to timeout_ms if it's empty.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-sw-timer" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Kernel Object &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('sw-timer')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#5E7A63;">
+            <span class="node-modal__tag">Kernel Object</span>
+            <h2>Software Timer</h2>
+            <p class="node-modal__lede">Tick-driven timers built on top of the scheduler. All software timers live in a software timer handler task. Software timers can be configured to have one-shot or repeating callbacks.</p>
+            <h3>Overview</h3>
+            <p>Each <code>SoftwareTimer</code> sits in one of two lists: a blocked list sorted by <code>expiry_tick</code>, and an active list. <code>software_timer_tick()</code> runs in on the scheduler systick and moves expired timers onto the active list and signals a semaphore. The callback itself runs later, off the tick, on a dedicated <code>sw_timer</code> service task. Periodic timers re-arm relative to their scheduled expiry (<code>expiry_tick += period</code>), not to when they actually ran, to prevent drift.</p>
+
+<pre>
+struct SoftwareTimer {
+  uint64_t       expiry_tick;   // scheduler tick this timer next fires at
+  uint64_t       period;        // ticks between fires (periodic) or until fire (one-shot)
+
+  TimerMode      timer_mode;    // one-shot or periodic
+  TimerCallback  callback;      // runs when it fires
+
+  TimerListId    list_id;       // which list this node is currently in
+  SoftwareTimer *next;          // intrusive singly-linked list link
+};
+</pre>
+
+            <h3>Software timer lifecycle</h3>
+            <img src="project10\software_timer\software_timer_flow.png" alt="", width="90%">
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>software_timer_init</td><td><code>StatusCode software_timer_init();</code></td><td>Initialize the software timer subsystem's internal lists.</td></tr>
+                <tr><td>software_timer_start</td><td><code>StatusCode software_timer_start();</code></td><td>Start the service task that runs expired timers' callbacks.</td></tr>
+                <tr><td>software_timer_create</td><td><code>StatusCode software_timer_create(SoftwareTimer *software_timer, uint64_t period, TimerCallback callback_function, TimerMode timer_mode);</code></td><td>Configure a timer with its period, callback, and one-shot/periodic mode.</td></tr>
+                <tr><td>software_timer_stop</td><td><code>StatusCode software_timer_stop(SoftwareTimer *software_timer);</code></td><td>Cancel a timer, removing it from whichever internal list it's in.</td></tr>
+                <tr><td>software_timer_reset</td><td><code>StatusCode software_timer_reset(SoftwareTimer *software_timer);</code></td><td>(Re-)arm a timer to expire after its period from now.</td></tr>
+                <tr><td>software_timer_tick</td><td><code>void software_timer_tick(uint64_t now_tick);</code></td><td>Move every expired timer from blocked to active and signal the service task once per timer.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-spinlock" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Multicore &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('spinlock')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#6B4B6E;">
+            <span class="node-modal__tag">Multicore</span>
+            <h2>Spinlock</h2>
+            <p class="node-modal__lede">A cross-core lock using Lamport's Bakery algorithm.</p>
+            <h3>Overview</h3>
+            <p>Each core draws a ticket one higher than the max ticket any other core currently holds, then waits until every other core whose <code>(ticket, core_id)</code> pair sorts before its own has passed through.</p>
+
+            <h3>Spinlock usage</h3>
+            <img src="project10\spinlock\spinlock_flow.png" alt="", width="80%">
+
+            <h3>Multicore example</h3>
+            <img src="project10\spinlock\multicore_spinlock.png" alt="", width="60%">
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>spinlock_init</td><td><code>void spinlock_init(Spinlock *lock);</code></td><td>Initialize a spinlock to the unlocked state.</td></tr>
+                <tr><td>spinlock_acquire</td><td><code>void spinlock_acquire(Spinlock *lock);</code></td><td>Acquire the lock, spinning until it's this core's turn.</td></tr>
+                <tr><td>spinlock_release</td><td><code>void spinlock_release(Spinlock *lock);</code></td><td>Release the lock.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- ============ DRIVERS ============ -->
+    <div class="node-modal" id="modal-uart" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('uart')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>UART</h2>
+            <p class="node-modal__lede">UART driver with RX calls that automatically switch between blocking and task-based transmission.</p>
+            <h3>Overview</h3>
+            <p><code>uart_tx()</code> operations all check <code>uart_task_started</code> before every write. Until a channel's TX task has been started, they fall through to raw blocking implementation, which happens during early boot, before the scheduler or task exists. Once <code>uart_channel_task_start()</code> has been called for a channel, the same calls instead enqueue into a ring buffer and wake a dedicated <code>uart_tx_task</code> with a semaphore. The UART buffer + task mechanism is guarded by a spinlock and can be accessed from any core</p>
+            <h3>UART buffer + task mechanism</h3>
+            <p>The UART buffer and task mechanism keeps uart calls lightweight which is important for an RTOS. Additionally, it prevents jumbled/stomped UART messages when multiple cores & tasks try to write through the same UART peripheral.</p>
+            <img src="project10\uart\uart_tx_operation.png" alt="", width="80%">
+<pre>
+kmain()
+  uart_channel_init(...)
+  uart_print("booting...")       -> raw PIO, straight out
+  scheduler_init(...)
+  uart_channel_task_start(...)   -> creates uart_tx_task
+  scheduler_start()
+  ...
+  uart_print("running")          -> same call, now enqueues
+                                     + wakes uart_tx_task
+</pre>
+            <h3>Channel table</h3>
+            <p>Six BCM2711 UART instances exist; one is unsupported and the rest are fixed hardware facts, not caller-configurable:</p>
+            <table>
+                <tr><th>Channel</th><th>Base</th></tr>
+                <tr><td>UART_CHANNEL_0</td><td>UART0_BASE (0xFE201000)</td></tr>
+                <tr><td>UART_CHANNEL_1</td><td>unsupported (mini-UART)</td></tr>
+                <tr><td>UART_CHANNEL_2</td><td>UART2_BASE (0xFE201400)</td></tr>
+                <tr><td>UART_CHANNEL_3</td><td>UART3_BASE (0xFE201600)</td></tr>
+                <tr><td>UART_CHANNEL_4</td><td>UART4_BASE (0xFE201800)</td></tr>
+                <tr><td>UART_CHANNEL_5</td><td>UART5_BASE (0xFE201A00)</td></tr>
+            </table>
+            <h3>Configuring a channel</h3>
+            <p>Each channel gets its own independent <code>UartConfig</code>, so pins, baud rate, and mode can differ freely from channel to channel.</p>
+<pre>
+typedef struct {
+  uint8_t      tx_pin;             // GPIO pin for TX
+  uint8_t      rx_pin;             // GPIO pin for RX, or UART_PIN_NONE for TX-only
+  GPIOFunc     alt_func;           // ALT function tx_pin/rx_pin get muxed to
+  UartBaudrate baudrate;           // UART_BAUDRATE_115200 or UART_BAUDRATE_921600
+  UartMode     mode;               // UART_MODE_BLOCKING or UART_MODE_BUFFERED_TASK
+  bool         is_dma_enabled;     // only meaningful when mode == UART_MODE_BUFFERED_TASK
+  uint8_t      dma_channel;        // which DMA channel to use if is_dma_enabled
+  uint16_t     task_stack_words;   // TX drain task's stack size
+  uint8_t      task_priority;      // TX drain task's priority
+} UartConfig;
+</pre>
+            <p>Configuring the print channel for buffered, DMA-paced TX:</p>
+<pre>
+static UartConfig print_uart_cfg = {
+  .tx_pin = 14, .rx_pin = 15,
+  .alt_func = GPIO_FUNC_ALT0,
+  .baudrate = UART_BAUDRATE_115200,
+  .mode = UART_MODE_BUFFERED_TASK,
+  .is_dma_enabled = true,
+  .dma_channel = UART_DEFAULT_DMA_CHANNEL,
+  .task_stack_words = 256,
+  .task_priority = TASK_PRIORITY_2,
+};   // static — uart_channel_init() stores this pointer, not a copy
+
+uart_channel_init(UART_CHANNEL_PRINT, &print_uart_cfg);
+uart_channel_task_start(UART_CHANNEL_PRINT);
+</pre>
+            <h3>API — lifecycle</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>uart_channel_init</td><td><code>StatusCode uart_channel_init(uint8_t channel, UartConfig *config);</code></td><td>Configure a channel's GPIO pins, baud rate, and line control.</td></tr>
+                <tr><td>uart_channel_deinit</td><td><code>void uart_channel_deinit(uint8_t channel);</code></td><td>Drain the TX FIFO, disable the UART, and release its GPIO pins.</td></tr>
+                <tr><td>uart_channel_drain</td><td><code>void uart_channel_drain(uint8_t channel);</code></td><td>Block until the TX FIFO has fully drained.</td></tr>
+                <tr><td>uart_channel_task_start</td><td><code>StatusCode uart_channel_task_start(uint8_t channel);</code></td><td>Start a channel's ring-buffer TX task (and, for the print channel, enable RX interrupts).</td></tr>
+            </table>
+            <h3>API — TX</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>uart_channel_tx_raw</td><td><code>void uart_channel_tx_raw(uint8_t channel, uint8_t byte);</code></td><td>Transmit a single raw byte, blocking until the TX FIFO has room.</td></tr>
+                <tr><td>uart_channel_print</td><td><code>void uart_channel_print(uint8_t channel, const char *str);</code></td><td>Write a NUL-terminated string.</td></tr>
+                <tr><td>uart_channel_printf</td><td><code>void uart_channel_printf(uint8_t channel, const char *fmt, ...);</code></td><td>Write a printf-style string. Supports %c %s %d %u %x %X %% with zero-padding and width.</td></tr>
+                <tr><td>uart_channel_send_byte</td><td><code>void uart_channel_send_byte(uint8_t channel, uint8_t byte);</code></td><td>Queue a byte for transmission via the ring buffer (full mode only).</td></tr>
+            </table>
+            <h3>API — RX</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>uart_channel_rx</td><td><code>uint8_t uart_channel_rx(uint8_t channel);</code></td><td>Read one byte, blocking until the RX FIFO is non-empty.</td></tr>
+                <tr><td>uart_channel_rx_nonblocking</td><td><code>StatusCode uart_channel_rx_nonblocking(uint8_t channel, uint8_t *out);</code></td><td>Read one byte if available, without blocking (E_EMPTY otherwise).</td></tr>
+                <tr><td>uart_channel_rx_timed</td><td><code>StatusCode uart_channel_rx_timed(uint8_t channel, uint8_t *out, uint32_t timeout_ms);</code></td><td>Read one byte, blocking up to timeout_ms (E_TIMED_OUT otherwise).</td></tr>
+                <tr><td>uart_rx_irq_enable</td><td><code>void uart_rx_irq_enable(UartRxHandler handler);</code></td><td>Register an additional app-specific RX byte callback.</td></tr>
+                <tr><td>uart_rx_irq_handler</td><td><code>void uart_rx_irq_handler(void);</code></td><td>RX interrupt handler: drains the RX FIFO, feeds the DFU-trigger watch, calls the registered handler.</td></tr>
+            </table>
+            <h3>API — DMA &amp; diagnostics</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>uart_dma_irq_handler</td><td><code>void uart_dma_irq_handler(void);</code></td><td>TX-complete handler for the UART DMA channel; called from _irq_handler.</td></tr>
+                <tr><td>uart_fault_report</td><td><code>void uart_fault_report(uint32_t kind, uint32_t pc, uint32_t addr, uint32_t status);</code></td><td>Print a fixed-format fault report from a context where the normal printf path may not be safe.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-gpio" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('gpio')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>GPIO</h2>
+            <p class="node-modal__lede">Direct register-level control of the BCM2711 GPIO controller — function select, pull, and pin I/O.</p>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>gpio_set_function</td><td><code>void gpio_set_function(uint32_t pin, GPIOFunc funct);</code></td><td>Set a pin's alternate function (input, output, or ALT0-ALT5).</td></tr>
+                <tr><td>gpio_set_pull</td><td><code>void gpio_set_pull(uint8_t pin, GPIOPull pull);</code></td><td>Set a pin's internal pull-up/pull-down/none.</td></tr>
+                <tr><td>gpio_on</td><td><code>void gpio_on(uint32_t pin);</code></td><td>Drive a pin high.</td></tr>
+                <tr><td>gpio_off</td><td><code>void gpio_off(uint32_t pin);</code></td><td>Drive a pin low.</td></tr>
+                <tr><td>gpio_read</td><td><code>uint8_t gpio_read(uint32_t pin);</code></td><td>Read a pin's current input level.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-crc" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('crc')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>CRC</h2>
+            <p class="node-modal__lede">CRC32 computed with the ARMv8 hardware crc32b/h/w instructions.</p>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>crc32_init</td><td><code>StatusCode crc32_init();</code></td><td>Check whether the CPU supports the ARMv8 CRC32 instructions (via ID_ISAR5).</td></tr>
+                <tr><td>crc32_start</td><td><code>void crc32_start(CRC32 *ctx);</code></td><td>Reset a CRC32 context to its initial value.</td></tr>
+                <tr><td>crc32_update</td><td><code>void crc32_update(CRC32 *ctx, const uint8_t *data, size_t len);</code></td><td>Fold len bytes of data into a running CRC32.</td></tr>
+                <tr><td>crc32_update_byte</td><td><code>void crc32_update_byte(CRC32 *ctx, uint8_t byte);</code></td><td>Fold a single byte into a running CRC32.</td></tr>
+                <tr><td>crc32_finish</td><td><code>uint32_t crc32_finish(CRC32 *ctx);</code></td><td>Finalize a CRC32 context and return the checksum.</td></tr>
+                <tr><td>crc32_verify</td><td><code>int crc32_verify(CRC32 *ctx, uint32_t expected);</code></td><td>Finalize a CRC32 context and compare it against an expected value.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-dma" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('dma')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>DMA</h2>
+            <p class="node-modal__lede">BCM2711 legacy DMA controller used to allow other drivers to move data asynchronously.</p>
+            <p>Users declare a DmaControlBlock struct and register an ISR to unblock when the transaction is complete. The heaviest consumer of the DMA controller is the UART driver.</p>
+<pre>
+typedef struct {
+  uint32_t ti;          // transfer information (DMA_TI_* flags, DREQ pacing)
+  uint32_t source_ad;   // source bus address
+  uint32_t dest_ad;     // destination bus address
+  uint32_t txfr_len;    // transfer length in bytes
+  uint32_t stride;      // 2D stride (0 in linear mode)
+  uint32_t nextconbk;   // bus address of next CB, or 0 to stop
+  uint32_t reserved[2];
+} __attribute__((aligned(32))) DmaControlBlock;   // 8 words, DMA-visible RAM
+</pre>
+            <h3>How uart_tx_task uses it</h3>
+            <p>When a UART controller optionally enables DMA usage, the uart_tx task will instead copy the desired uart buffer address to a new DmaControlBlock, start the DMA operation, and wait on a semaphore. When the hardware finishes the DMA_IRQ fires and gives the semaphore back. Since the uart buffer is a ring buffer, in some cases where the buffer contents wrap around the physical array boundary, the DMA transaction is automatically split in two.</p>
+            <img src="project10\dma\uart_dma_usage.png" alt="", width="80%">
+
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>dma_channel_init</td><td><code>void dma_channel_init(uint8_t channel);</code></td><td>Power on and reset a channel. Call once before first use.</td></tr>
+                <tr><td>dma_start</td><td><code>void dma_start(uint8_t channel, const DmaControlBlock *cb);</code></td><td>Kick off the transfer described by cb on the given channel.</td></tr>
+                <tr><td>dma_wait</td><td><code>StatusCode dma_wait(uint8_t channel, uint32_t spin_limit);</code></td><td>Spin until the channel's transfer completes or times out.</td></tr>
+                <tr><td>dma_selftest</td><td><code>StatusCode dma_selftest(uint8_t channel);</code></td><td>Bring-up self-test: a mem&rarr;mem copy that proves the controller and BUS_ADDRESS() alias are correct.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-emmc" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('emmc')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>eMMC</h2>
+            <p class="node-modal__lede">The eMMC flash memory controller driver is used by the bootloader and app to read/write persistent storage (boot flags, bootloader &amp; app binaries).</p>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>emmc_init</td><td><code>StatusCode emmc_init(void);</code></td><td>Bring up the eMMC controller: reset, clock to 400kHz, CMD0-CMD7 init, negotiate width/speed. Idempotent if already running.</td></tr>
+                <tr><td>emmc_read_blocks</td><td><code>StatusCode emmc_read_blocks(uint32_t sector, void *buf, uint32_t count);</code></td><td>Read count sectors starting at sector into buf, via ADMA2 or PIO fallback.</td></tr>
+                <tr><td>emmc_write_blocks</td><td><code>StatusCode emmc_write_blocks(uint32_t sector, const void *buf, uint32_t count);</code></td><td>Write count sectors starting at sector from buf. Refuses to write below EMMC_FIRMWARE_FLOOR.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-gic-interrupts" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('gic-interrupts')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>GIC &amp; Interrupts</h2>
+            <p class="node-modal__lede">GIC-400 interrupt routing, and a dispatch table every registered handler goes through.</p>
+            <h3>Initializing a new interrupt and interrupt execution flow:</h3>
+            <p><strong>GIC initialization:</strong> <code>gic_distributor_init()</code> runs once globally. Every core, including core 0, must separately call <code>gic_percore_init()</code> to bring up its own banked CPU interface.</p>
+            <p><strong>IRQ registration:</strong> <code>irq_register(intid, handler)</code> populates a flat 256-entry table (<code>g_handlers[intid]</code>) that the assembly <code>_irq_handler</code> calls into via <code>irq_dispatch(intid)</code>.</p>
+            <p><strong>ISR routing:</strong> When an interrupt fires, the PC jumps to the _irq_handler located in assembly startup code. It executes a context save and jumps to the appropriate ISR.</p>
+            <img src="project10\gic\interrupt_flow.png" alt="", width="90%">
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>gic_distributor_init</td><td><code>void gic_distributor_init(void);</code></td><td>Initialize GIC-400 distributor-global state (call once from core 0).</td></tr>
+                <tr><td>gic_percore_init</td><td><code>void gic_percore_init(void);</code></td><td>Init this core's GIC CPU interface, enable PPI 30 (timer) and ARM Local mailbox 0 IRQ.</td></tr>
+                <tr><td>gic_disable</td><td><code>void gic_disable(void);</code></td><td>Disable this core's GIC CPU interface and undo its timer/mailbox IRQ routing.</td></tr>
+                <tr><td>gic_enable_spi</td><td><code>void gic_enable_spi(uint32_t intid, uint8_t priority);</code></td><td>Enable a shared peripheral interrupt: priority, route to core 0, level-sensitive, enable.</td></tr>
+                <tr><td>gic_send_mailbox_ipi</td><td><code>void gic_send_mailbox_ipi(uint32_t target_core);</code></td><td>Send a targeted IPI to one core via its ARM Local mailbox 0 (bypasses the GIC).</td></tr>
+                <tr><td>irq_register</td><td><code>StatusCode irq_register(uint32_t intid, IrqHandler handler);</code></td><td>Register (or, with NULL, clear) the C handler for a GIC interrupt ID.</td></tr>
+                <tr><td>irq_dispatch</td><td><code>void irq_dispatch(uint32_t intid);</code></td><td>Invoke the handler registered for intid, or do nothing if none is registered.</td></tr>
+                <tr><td>enter_critical</td><td><code>static inline uint32_t enter_critical(void);</code></td><td>Disable IRQs and return the previous CPSR.</td></tr>
+                <tr><td>exit_critical</td><td><code>static inline void exit_critical(uint32_t saved_cpsr);</code></td><td>Restore a CPSR previously saved by enter_critical().</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-gentimer" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('gentimer')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>Generic Timer</h2>
+            <p class="node-modal__lede">The physical timer (CNTP) that drives the 1&nbsp;kHz scheduler tick.</p>
+            <h3>Overview</h3>
+            <p><code>gentimer_init()</code> programs <code>CNTP_CVAL</code> for the first tick and enables the timer; <code>read_cntpct()</code> reads the free-running 64-bit physical counter.</p>
+            <p>The generic timer interrupt is treated as a special case by <code>_irq_handler</code> in assembly, directly calling (<code>cntx_switch$</code>) instead of routing it through the generic C dispatch table like every other interrupt.</p>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>gentimer_init</td><td><code>StatusCode gentimer_init(uint32_t *clk_freq, uint32_t hz);</code></td><td>Configure the EL1 physical timer (CNTP) to fire at hz and enable its interrupt.</td></tr>
+                <tr><td>gentimer_disable</td><td><code>void gentimer_disable(void);</code></td><td>Stop the EL1 physical timer.</td></tr>
+                <tr><td>read_cntpct</td><td><code>uint64_t read_cntpct(void);</code></td><td>Read the current physical counter value (CNTPCT).</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-i2c" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('i2c')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>I2C</h2>
+            <p class="node-modal__lede">Generic I2C driver with access to all six usable I2C channels.</p>
+            <p><code>i2c_channel_write()</code>/<code>read()</code> run a simple poll FIFO &rarr; poll DONE sequence.</p>
+<pre>
+typedef struct {
+  uint8_t     sda_pin;
+  uint8_t     scl_pin;
+  GPIOFunc    alt_func;   // ALT function sda_pin/scl_pin get muxed to
+  I2cBaudrate baudrate;   // I2C_BAUDRATE_STANDARD_100K or I2C_BAUDRATE_FAST_400K
+} I2cConfig;
+</pre>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>i2c_channel_init</td><td><code>StatusCode i2c_channel_init(uint8_t channel, I2cConfig *config);</code></td><td>Configure an I2C channel's GPIO pins, pull-ups, and bus speed.</td></tr>
+                <tr><td>i2c_channel_deinit</td><td><code>void i2c_channel_deinit(uint8_t channel);</code></td><td>Disable the channel and release its GPIO pins.</td></tr>
+                <tr><td>i2c_channel_write</td><td><code>StatusCode i2c_channel_write(uint8_t channel, uint8_t addr, const uint8_t *buf, uint16_t len);</code></td><td>Write len bytes to a 7-bit slave address, blocking.</td></tr>
+                <tr><td>i2c_channel_read</td><td><code>StatusCode i2c_channel_read(uint8_t channel, uint8_t addr, uint8_t *buf, uint16_t len);</code></td><td>Read len bytes from a 7-bit slave address, blocking.</td></tr>
+                <tr><td>i2c_channel_write_read</td><td><code>StatusCode i2c_channel_write_read(uint8_t channel, uint8_t addr, const uint8_t *tx_buf, uint16_t tx_len, uint8_t *rx_buf, uint16_t rx_len);</code></td><td>Write tx_buf then, with a repeated START, read rx_len bytes.</td></tr>
+                <tr><td>i2c_channel_last_status</td><td><code>uint32_t i2c_channel_last_status(uint8_t channel);</code></td><td>Return the raw S register value as of the channel's last transfer.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-i2s" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('i2s')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>I2S</h2>
+            <p class="node-modal__lede">A full-duplex PCM/I2S driver</p>
+            <p><code>i2s_transfer()</code> services both the TX and RX FIFOs in one interleaved polling loop rather than separate write/read calls, since RXON keeps sampling regardless of whether software is draining it.</p>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>i2s_init</td><td><code>StatusCode i2s_init(I2sConfig *config);</code></td><td>Configure GPIO pins (ALT0), PCM clock (via cprman), and PCM peripheral for full-duplex 16-bit stereo.</td></tr>
+                <tr><td>i2s_deinit</td><td><code>void i2s_deinit(void);</code></td><td>Disable the PCM peripheral, stop the PCM clock generator, release GPIO pins.</td></tr>
+                <tr><td>i2s_is_initialized</td><td><code>StatusCode i2s_is_initialized(void);</code></td><td>Query init state.</td></tr>
+                <tr><td>i2s_transfer</td><td><code>StatusCode i2s_transfer(const int16_t *tx, int16_t *rx, uint32_t count);</code></td><td>Blocking full-duplex transfer of count interleaved stereo samples.</td></tr>
+                <tr><td>i2s_last_status</td><td><code>uint32_t i2s_last_status(void);</code></td><td>Debug aid: raw CS_A value as of the last transfer's last poll iteration.</td></tr>
+                <tr><td>i2s_transfer_totals</td><td><code>void i2s_transfer_totals(uint32_t *out_tx_total, uint32_t *out_rx_total);</code></td><td>Debug aid: cumulative sample counts moved since init.</td></tr>
+                <tr><td>i2s_error_total</td><td><code>uint32_t i2s_error_total(void);</code></td><td>Debug aid: count of transfer calls that observed TXERR/RXERR since init.</td></tr>
+            </table>
+        </div>
+    </div>
+
+
+    <div class="node-modal" id="modal-jtag" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('jtag')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>JTAG</h2>
+            <p class="node-modal__lede">One function that enables hardware debugging.</p>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>jtag_gpio_init</td><td><code>void jtag_gpio_init(void);</code></td><td>Configure the JTAG pins (TMS/TDI/TCK/TDO/TRST) as ALT4 and enable debug routing via CHIPCTL_A.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-mailbox" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('mailbox')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>Mailbox</h2>
+            <p><code>mbox_property_call()</code> writes a bus address into <code>MBOX_WRITE</code> and polls <code>MBOX_READ</code> until the same address echoes back. The request buffer and the response occupy the same memory, in place. <code>mbox_get_clock_rate()</code>, <code>mbox_get_board_serial()</code>, and <code>mbox_get_arm_memory()</code> are one-tag convenience wrappers around it.</p>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>mbox_property_call</td><td><code>StatusCode mbox_property_call(volatile uint32_t *buf);</code></td><td>Send a raw property-tag request buffer and block until the VC responds.</td></tr>
+                <tr><td>mbox_get_clock_rate</td><td><code>StatusCode mbox_get_clock_rate(uint32_t clock_id, uint32_t *out_hz);</code></td><td>Convenience wrapper: GET_CLOCK_RATE for clock_id, in Hz.</td></tr>
+                <tr><td>mbox_get_board_serial</td><td><code>StatusCode mbox_get_board_serial(uint32_t *out_serial_lo, uint32_t *out_serial_hi);</code></td><td>Convenience wrapper: GET_BOARD_SERIAL, 64-bit split across two words.</td></tr>
+                <tr><td>mbox_get_arm_memory</td><td><code>StatusCode mbox_get_arm_memory(uint32_t *out_base, uint32_t *out_size);</code></td><td>Convenience wrapper: GET_ARM_MEMORY — ARM-visible RAM base and size.</td></tr>
+                <tr><td>mbox_selftest</td><td><code>StatusCode mbox_selftest(void);</code></td><td>Bring-up self-test: queries firmware revision and prints it over UART.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-pwm" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('pwm')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>PWM (PCA9685)</h2>
+            <p class="node-modal__lede">A driver for the PCA9685 16-channel I2C PWM controller, used for servos and LEDs.</p>
+            <p><code>pwm_pca9685_init()</code> wakes the chip from sleep, computes PRE_SCALE from the target update rate via the datasheet formula, and restarts it with auto-increment enabled. <code>pwm_pca9685_set_channel()</code> sets a channel's on/off tick positions from delay/duty cycle fractions.</p>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>pwm_pca9685_init</td><td><code>StatusCode pwm_pca9685_init(Pca9685Config *config);</code></td><td>Wake the PCA9685 from sleep and program it for pwm_freq_hz.</td></tr>
+                <tr><td>pwm_pca9685_deinit</td><td><code>StatusCode pwm_pca9685_deinit(void);</code></td><td>Force every channel full-off, sleep the chip, clear stored config.</td></tr>
+                <tr><td>pwm_pca9685_is_initialized</td><td><code>StatusCode pwm_pca9685_is_initialized(void);</code></td><td>Query init state.</td></tr>
+                <tr><td>pwm_pca9685_set_channel</td><td><code>StatusCode pwm_pca9685_set_channel(uint8_t pwm_channel, uint32_t delay, uint32_t duty_cycle);</code></td><td>Set one channel's pulse phase (delay) and width (duty_cycle) as fractions of UINT32_MAX.</td></tr>
+                <tr><td>pwm_pca9685_set_channel_full_off</td><td><code>StatusCode pwm_pca9685_set_channel_full_off(uint8_t pwm_channel);</code></td><td>Force one channel fully off, overriding ON/OFF ticks.</td></tr>
+                <tr><td>pwm_pca9685_set_channel_full_on</td><td><code>StatusCode pwm_pca9685_set_channel_full_on(uint8_t pwm_channel);</code></td><td>Force one channel fully on, overriding ON/OFF ticks.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-reset" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('reset')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>Reset</h2>
+            <p class="node-modal__lede">Two different ways to reboot - hard reset and soft reset into bootloader.</p>
+            <table>
+                <tr><th></th><th>system_hard_reset()</th><th>enter_bootloader()</th></tr>
+                <tr><td>Mechanism</td><td>Full SoC reset via the PM watchdog</td><td>Direct jump to the bootloader already in RAM</td></tr>
+                <tr><td>Speed</td><td>Slow — everything reloads from the SD card</td><td>Fast — no hardware reset at all</td></tr>
+            </table>
+            <p><code>enter_bootloader()</code> zeros the entire <code>.stacks</code> region, including the IRQ-mode stack, then jumps to the bootloader. This is used during DFU.</p>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>system_hard_reset</td><td><code>void system_hard_reset(void);</code></td><td>Full SoC reset via the PM watchdog; reloads the bootloader from the SD card. Never returns.</td></tr>
+                <tr><td>enter_bootloader</td><td><code>void enter_bootloader(void);</code></td><td>Quiesce app peripherals and jump directly to the bootloader in RAM. Never returns. Task context only.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-watchdog" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('watchdog')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>Watchdog</h2>
+            <p class="node-modal__lede">A watchdog driver that monitors the health of the RTOS, manages boot flags and supports multicore mode.</p>
+            <h3>Overview</h3>
+            <p><code>watchdog_init()</code> arms the BCM2711 PM watchdog (timeout clamped to 1&ndash;15s) from a caller-owned <code>WatchdogConfig</code>. The watchdog is kicked through a dedicated watchdog task.</p>
+            <p>If configured, the watchdog features a confirm-slot timer that clears the current app's "on trial" flag once it's run long enough to be trusted. <code>wdt_meta</code> (persisted to eMMC, CRC-checked) tracks reset count, active slot, and trial state across reboots.</p>
+            <h3>Watchdog config struct:</h3>
+<pre>
+typedef struct {
+  uint32_t timeout_s;                         // clamped to [1, 15]s by watchdog_init()
+  WatchdogResetPolicy policy;                 // what the bootloader does past tolerance
+  int32_t  tolerance;                         // number of watchdog failures until the bootloder steps in
+  int64_t  confirm_delay_ms;                  // WATCHDOG_CONFIRM_MANUAL = confirm yourself
+  bool     multicore_mode;                    // aggregate kicks from every companion core
+  CompanionCoreContext *companion_core_ctx;   // required when multicore_mode is true
+} WatchdogConfig;
+</pre>
+
+            <h3>Watchdog boot flags:</h3>
+<pre>
+typedef struct {
+  uint32_t magic;               // WDT_META_MAGIC; mismatch -> struct discarded
+  uint32_t wdt_reset_count;     // consecutive watchdog resets since last confirm
+  int32_t  wdt_reset_tolerance; // copy of WatchdogConfig.tolerance, persisted
+  uint32_t wdt_reset_policy;    // copy of WatchdogConfig.policy, persisted
+  uint32_t wdt_reset_reason;    // not yet written by the bootloader
+  uint32_t active_app_slot;     // APP_SLOT_A / APP_SLOT_B (see eMMC page)
+  uint32_t app_slot_trial;      // 1 = active slot unconfirmed (A/B trial)
+  uint32_t trial_boot_count;    // bootloader re-entries while on trial
+  uint32_t crc;                 // CRC32 over every field above; MUST be last
+} WdtMeta;   // lives in eMMC EMMC_SECTOR_METADATA; wdt_meta is the in-RAM shadow
+</pre>
+            <h3>Multicore kick aggregation</h3>
+            <p>When <code>multicore_mode</code> is on, <code>watchdog_core_kick()</code> doesn't touch the hardware watchdog directly, it's guarded. This guarantees that one failing core triggers a watchdog reset. The watchdog keeps track of which cores are initialized via the compantion core context struct.</p>
+            <img src="project10\watchdog\watchdog_kick_flow.png" alt="", width="50%">
+            <h3>Confirm-slot two-stage design</h3>
+            <p>The watchdog supports the bootloader's app-slotting feature. A one shot timer callback signals a semaphore, and a separate dedicated task performs the eMMC write that signals to the bootloader that the app is healthy..</p>
+
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>wdt_meta_read</td><td><code>StatusCode wdt_meta_read(void);</code></td><td>Read/verify (magic + CRC) metadata from eMMC into the in-RAM shadow.</td></tr>
+                <tr><td>wdt_meta_write</td><td><code>StatusCode wdt_meta_write(void);</code></td><td>Recompute the CRC and persist the shadow to eMMC.</td></tr>
+                <tr><td>wdt_meta_confirm_slot</td><td><code>StatusCode wdt_meta_confirm_slot(void);</code></td><td>Confirm the active app slot, clearing the trial flag so the bootloader won't roll back.</td></tr>
+                <tr><td>watchdog_was_wdt_reset</td><td><code>bool watchdog_was_wdt_reset(void);</code></td><td>Return true if the previous boot was caused by a watchdog timeout. Call before watchdog_init().</td></tr>
+                <tr><td>watchdog_init</td><td><code>StatusCode watchdog_init(WatchdogConfig *config);</code></td><td>Arm the watchdog from config (timeout clamped to [1,15]s). Stores the pointer, not a copy.</td></tr>
+                <tr><td>watchdog_kick</td><td><code>void watchdog_kick(void);</code></td><td>Reset the countdown. Safe from any context — one atomic MMIO write.</td></tr>
+                <tr><td>watchdog_core_kick</td><td><code>StatusCode watchdog_core_kick(void);</code></td><td>Per-core watchdog report; single-core builds just call watchdog_kick().</td></tr>
+                <tr><td>watchdog_disable</td><td><code>void watchdog_disable(void);</code></td><td>Disarm the watchdog. No reset will occur after this returns.</td></tr>
+                <tr><td>watchdog_trigger_reset</td><td><code>void watchdog_trigger_reset(void);</code></td><td>Trigger an immediate reset via the watchdog. Never returns.</td></tr>
+                <tr><td>watchdog_task_start</td><td><code>StatusCode watchdog_task_start(void);</code></td><td>Arm the periodic kick timer and (if configured) the confirm-slot timer/task.</td></tr>
+                <tr><td>watchdog_core_task_start</td><td><code>StatusCode watchdog_core_task_start(void);</code></td><td>Start a companion core's periodic watchdog_core_kick() reports.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-cprman" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Driver &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('cprman')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#8A6D4B;">
+            <span class="node-modal__tag">Driver</span>
+            <h2>CPRMAN</h2>
+            <p class="node-modal__lede">Peripheral clock source for I2C, UART, and I2S.</p>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>cprman_pcm_clock_enable</td><td><code>StatusCode cprman_pcm_clock_enable(uint32_t target_hz);</code></td><td>Enable the PCM clock generator at the closest achievable rate to target_hz.</td></tr>
+                <tr><td>cprman_pcm_clock_disable</td><td><code>void cprman_pcm_clock_disable(void);</code></td><td>Stop the PCM clock generator (graceful ENAB clear, KILL as timeout fallback).</td></tr>
+                <tr><td>cprman_pcm_clock_is_running</td><td><code>bool cprman_pcm_clock_is_running(void);</code></td><td>Query whether the PCM clock generator is currently running (CTL.BUSY).</td></tr>
+                <tr><td>cprman_pcm_clock_status</td><td><code>void cprman_pcm_clock_status(uint32_t *out_ctl, uint32_t *out_div);</code></td><td>Debug aid: read back the raw CTL/DIV registers.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- ============ BASE OF RTOS / KERNEL ============ -->
+    <div class="node-modal" id="modal-scheduler" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Base Kernel &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('scheduler')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#1E3A5F;">
+            <span class="node-modal__tag">Base Kernel</span>
+            <h2>Scheduler</h2>
+            <p class="node-modal__lede">A 6-level priority, round-robin scheduler, with one instance per core.</p>
+            <h3>Overview</h3>
+            <p>Each core owns its own <code>scheduler_init()</code> call, its own ready/blocked lists, its own idle task, and its own <code>Spinlock</code> scheduler lock. The current implemention is based on a BMP (bound multiprocess) model, so each task is bound to a core. <code>core_id</code> never changes once created.</p>
+
+            <h3>SchedulerCore struct, one owned per core:</h3>
+<pre>
+typedef struct {
+  List               ready_list[NUM_TASK_PRIORITIES]; // one per priority level
+  List               blocked_task_list;               // sorted by wakeup_time
+  volatile uint32_t *s_clk_freq;                       // this core's timer frequency
+  volatile uint64_t *s_tick_count;                     // this core's tick counter
+  uint32_t           hz;                               // tick rate (1000)
+  Spinlock           lock;                             // this core's scheduler lock
+  TaskControlBlock   idle_tcb;                         // this core's idle task
+  StackType_t        idle_stack[IDLE_STACK_DEPTH];     // idle task's stack (64 words)
+} SchedulerCore;
+
+static SchedulerCore g_cores[COMPANION_CORE_MAX_CORES];  // one per core, indexed by core_id
+</pre>
+<h3>Task States</h3>            
+<p>The scheduler is responsible for transitioning tasks between READY, RUNNING, and BLOCKED. Calling <code>mutex_lock()</code>, <code>semaphore_take()</code>, or <code>task_delay_ms()</code> pulls the task off its priority's ready list, drops it onto the <code>blocked_task_list</code> sorted by <code>wakeup_time</code>.</p>
+            <img src="project10\scheduler\task_lists.png" alt="", width="90%">
+            
+            <h3>Scheduler Systick execution</h3>
+            <p><code>scheduler_switch_context()</code> runs on every 1&nbsp;kHz tick and executes the round robin algorithm. Starting from the highest priority level and working down, the scheduler picks the first non-empty ready list and runs whichever task <code>list-&gt;index</code> currently points at. Several tasks sharing a priority rotate.</p>
+            <img src="project10\scheduler\systick_execution.png" alt="", width="80%">
+            
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>scheduler_init</td><td><code>StatusCode scheduler_init(uint32_t core_id, volatile uint32_t *p_clk_freq, uint32_t new_hz, volatile uint64_t *p_tick_count);</code></td><td>Initialize the calling core's own scheduler instance (clock/tick links, ready/blocked lists, idle task).</td></tr>
+                <tr><td>scheduler_lock / scheduler_unlock</td><td><code>void scheduler_lock(uint32_t core_id); void scheduler_unlock(uint32_t core_id);</code></td><td>Acquire/release the given core's scheduler lock, guarding its ready/blocked lists.</td></tr>
+                <tr><td>scheduler_get_current_task</td><td><code>TaskControlBlock *scheduler_get_current_task();</code></td><td>Return the calling core's currently running task's TCB.</td></tr>
+                <tr><td>scheduler_start</td><td><code>StatusCode scheduler_start(void);</code></td><td>Pick the calling core's first task to run and hand off to it (never returns).</td></tr>
+                <tr><td>scheduler_add_to_ready_list</td><td><code>StatusCode scheduler_add_to_ready_list(TaskControlBlock **tcb);</code></td><td>Add a task to the back of the ready list for its priority, on its own core.</td></tr>
+                <tr><td>scheduler_remove_from_ready_list</td><td><code>StatusCode scheduler_remove_from_ready_list(TaskControlBlock **tcb);</code></td><td>Remove a task from the ready list of its priority, on its own core.</td></tr>
+                <tr><td>scheduler_switch_context</td><td><code>void scheduler_switch_context();</code></td><td>Perform a round-robin, priority-based context switch on the calling core.</td></tr>
+                <tr><td>task_delay_ms</td><td><code>void task_delay_ms(uint64_t ticks);</code></td><td>Block the calling task for the given number of ticks.</td></tr>
+                <tr><td>task_delay_until_ms</td><td><code>void task_delay_until_ms(uint64_t *wake_time, uint64_t ticks);</code></td><td>Block the calling task until wake_time + ticks, drift-free.</td></tr>
+                <tr><td>scheduler_get_tick_count</td><td><code>uint64_t scheduler_get_tick_count(void);</code></td><td>Return ticks since the calling core's scheduler_init().</td></tr>
+                <tr><td>scheduler_add_to_blocked_list</td><td><code>StatusCode scheduler_add_to_blocked_list(TaskControlBlock *tcb, uint64_t wakeup_time);</code></td><td>Insert a task into its own core's blocked list, sorted by ascending wakeup_time.</td></tr>
+                <tr><td>scheduler_remove_from_blocked_list</td><td><code>StatusCode scheduler_remove_from_blocked_list(TaskControlBlock *tcb);</code></td><td>Remove a task from its own core's blocked list, if present.</td></tr>
+                <tr><td>start_first_task</td><td><code>void start_first_task(void);</code></td><td>Load the first ready task's saved context and branch to it (never returns; defined in startup.s).</td></tr>
+                <tr><td>scheduler_change_task_priority</td><td><code>void scheduler_change_task_priority(TaskControlBlock *tcb, TaskPriorityLevel new_priority);</code></td><td>Move a task to a new priority level, relocating it in its ready list if running/ready.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-tasks" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Base Kernel &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('tasks')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#1E3A5F;">
+            <span class="node-modal__tag">Base Kernel</span>
+            <h2>Tasks</h2>
+            <p class="node-modal__lede">Units of execution defined by the system.</p>
+            <h3>Overview</h3>
+            <p><code>task_create()</code> allocates a <code>TaskControlBlock</code> from a fixed per-core pool (16 slots per core, <code>MAX_NUM_TASKS</code>) and a stack from the kernel heap, fills the stack with a watermark byte, and adds the task to its core's ready list.</p>
+
+<h3>TaskControlBlock struct</h3>
+<p>Each task is identified by a TCB struct, which keeps track of priority, stack location, task state, and tracks if the task is part of a ready or blocked list.</p>
+            <pre>
+struct TaskControlBlock {
+  volatile StackType_t *current_sp;  // live SP, saved/restored on every switch
+  StackType_t          *stack_high;  // top of allocated stack (initial SP)
+  StackType_t          *stack_base;  // bottom of stack; watermark check
+  uint16_t              stack_depth;
+
+  uint16_t              task_id;
+  uint32_t              core_id;     // which core's scheduler owns this task
+
+  volatile TaskState    current_state;
+  TaskPriorityLevel      priority;
+  uint64_t               wakeup_time;
+
+  ListItem               state_list_item;  // ready/blocked list node
+  ListItem               event_list_item;  // mutex/semaphore wait node
+
+  volatile TaskWakeupReason wakeup_reason;
+
+  TaskPriorityLevel      base_priority;    // pre-boost priority
+  uint32_t               mutexes_held;     // inheritance-enabled mutexes held
+};
+
+</pre>
+<h3>Task states</h3>
+<p>Tasks transition between three main states:</p>
+<img src="project10\task\task_lifecycle.png" alt="", width="80%">
+<h3>Task Stack:</h3>
+            <p><code>task_init_stack()</code> builds a task's very first stack frame, which is essential to context switching.</p>
+            <img src="project10\task\task_stack.png" alt="", width="60%">
+            <h3>Creating a task</h3>
+            <p>A task function takes one <code>void *</code> parameter and, typically never return. <code>task_exit_trap()</code> exists specifically to catch one that does.</p>
+<pre>
+static TaskControlBlock *blink_tcb = NULL;
+
+static void blink_task(void *params)
+{
+  (void)params;
+  while (1) {
+    gpio_on(LED_PIN);
+    task_delay_ms(500);
+    gpio_off(LED_PIN);
+    task_delay_ms(500);
+  }
+}
+
+// after scheduler_init(), before scheduler_start():
+StatusCode ret = task_create(blink_task, 256, TASK_PRIORITY_2, NULL, "blink", &blink_tcb);
+if (ret != E_OK) {
+  uart_printf("task_create failed: %d\r\n", ret);
+}
+</pre>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>task_create</td><td><code>StatusCode task_create(TaskFunction task_function, uint16_t stack_depth, TaskPriorityLevel priority, void *task_params, const char *name, TaskControlBlock **p_task_control_block);</code></td><td>Allocate a TCB and stack from static pools, initialize the task's stack frame, and add it to the ready list.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="node-modal" id="modal-heap" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Base Kernel &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('heap')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#1E3A5F;">
+            <span class="node-modal__tag">Base Kernel</span>
+            <h2>Heap</h2>
+            <p class="node-modal__lede">A 256&nbsp;KB bump allocator to manage dynamic memory in the kernel. Access is guarded by a spinlock.</p>
+            <h3>Overview</h3>
+<pre>
+static uint8_t   heap[HEAP_SIZE_BYTES];   // 256 KB, HEAP_SIZE_BYTES = 262144
+static uint32_t  heap_offset = 0;
+static Spinlock  heap_lock;               // guards heap_offset across cores
+
+void *heap_malloc(uint32_t size)
+{
+  size = (size + 3) & ~0b11;              // round up to 4-byte alignment
+
+  if (heap_offset + size > HEAP_SIZE_BYTES) {
+    return NULL;
+  }
+  void *block_start = &heap[heap_offset];
+  heap_offset += size;
+  return block_start;
+}
+</pre>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>heap_malloc</td><td><code>void *heap_malloc(uint32_t size);</code></td><td>Allocate size bytes from the static kernel heap pool.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- ============ MULTICORE ============ -->
+    <div class="node-modal" id="modal-companion-core" hidden>
+        <div class="node-modal__topbar">
+            <span class="node-modal__eyebrow">Multicore &middot; rpitos</span>
+            <button class="node-modal__close" onclick="closeNode('companion-core')">&larr; Close</button>
+        </div>
+        <div class="node-modal__inner" style="--tier-hue:#6B4B6E;">
+            <span class="node-modal__tag">Multicore</span>
+            <h2>Companion Core</h2>
+            <p class="node-modal__lede">Releases cores 1&ndash;3 from their boot-time parking loop into independent RTOS instances.</p>
+            <h3>Overview</h3>
+            <p><code>companion_core_start(core_id, entry)</code> hands a secondary core a bare function pointer and wakes it with a SEV.</p>
+
+            <h3>CompanionCoreContext struct</h3>
+            <p>The CompanionCoreContext struct is mainly used to manage the multicore watchdog feature</p>
+            <pre>
+typedef struct {
+  volatile uint32_t expected_mask;          // which cores should report in
+  volatile uint8_t  core_kicked[COMPANION_CORE_MAX_CORES]; // per-core kick flags
+} CompanionCoreContext;
+</pre>
+
+<h3>Companion core startup sequence:</h3>
+<img src="project10\multicore\multicore_startup.png" alt="", width="80%">
+<p> What a released core actually does with that entry point is run its own complete, independent <code>scheduler_init()</code>/<code>task_create()</code>/<code>scheduler_start()</code> sequence: a second full instance of everything in the Base of RTOS / Kernel tier above.</p>
+            <h3>A companion core's entry function</h3>
+<pre>
+static volatile uint32_t core1_clk_freq;
+static volatile uint64_t core1_tick_count = 0;
+
+static void led_task(void *params)
+{
+  (void)params;
+  while (1) {
+    gpio_on(LED_PIN);
+    task_delay_ms(500);
+    gpio_off(LED_PIN);
+    task_delay_ms(500);
+  }
+}
+
+static void core1_kmain(void)
+{
+  gpio_set_function(LED_PIN, GPIO_FUNC_OUTPUT);
+
+  gic_percore_init();                              // this core's own CPU interface
+  gentimer_init(&core1_clk_freq, hz);               // this core's own tick source
+  scheduler_init(1U, &core1_clk_freq, hz, &core1_tick_count);
+
+  TaskControlBlock *tcb;
+  task_create(led_task, 2048, TASK_PRIORITY_1, NULL, "led", &tcb);
+
+  __asm__ volatile ("cpsie i" ::: "memory");        // this core's own IRQs
+  scheduler_start();                                // never returns
+}
+</pre>
+            <h3>Core 0 releasing it</h3>
+<pre>
+void kmain(void)
+{
+  ...
+  gic_distributor_init();   // global — must happen before any core is released
+  gic_percore_init();       // core 0's own PPI30 + CPU-interface enable
+  gentimer_init(&clk_freq, hz);
+
+  if (companion_core_start(1U, core1_kmain) == E_OK) {
+    uart_print("core 0: released core 1\r\n");
+  }
+
+  __asm__ volatile ("cpsie i" ::: "memory");
+  scheduler_start();
+}
+</pre>
+            <h3>API</h3>
+            <table>
+                <tr><th>Function</th><th>Signature</th><th>Purpose</th></tr>
+                <tr><td>companion_core_init</td><td><code>StatusCode companion_core_init(CompanionCoreContext *context);</code></td><td>Link context to the companion_core module; marks core 0 expected.</td></tr>
+                <tr><td>companion_core_start</td><td><code>StatusCode companion_core_start(uint32_t core_id, void (*entry)(void));</code></td><td>Assign an entry function to a secondary core (1-3) and release it from the bootstrap parking loop.</td></tr>
+                <tr><td>companion_core_id</td><td><code>uint32_t companion_core_id(void);</code></td><td>Return this core's id (0-3), read from MPIDR.</td></tr>
+                <tr><td>companion_core_reset_active</td><td><code>void companion_core_reset_active(void);</code></td><td>Force every companion core released since the last call back into the bootstrap-style mailbox park loop.</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <script src="project10-tree.js"></script>
+</body>
+</html>

@@ -1,181 +1,136 @@
 const viewerConfigs = [
-  {
-    id: 'viewer1',
-    path: 'PCBanimation/STM32_FC_Board/board render',
-    start: 0,
-    end: 208,
-  },
-  {
-    id: 'viewer2',
-    path: 'PCBanimation/ESP32_FC_Board/board render',
-    start: 213,
-    end: 465,
-  },
-  {
-    id: 'viewer3',
-    path: 'PCBanimation/Diff_Breakout_Board_a/board render',
-    start: 0,
-    end: 237,
-  },
-  {
-    id: 'viewer4',
-    path: 'PCBanimation/Coil_Driver_Board/board render',
-    start: 0,
-    end: 208,
-  },
-  {
-    id: 'viewer5',
-    path: 'PCBanimation/CM4_Interface_Board/board render',
-    start: 0,
-    end: 255,
-  },
-  {
-    id: 'viewer6',
-    path: 'PCBanimation/FC4_Board/board render',
-    start: 1,
-    end: 255,
-  },
-  {
-    id: 'viewer7',
-    path: 'PCBanimation/Mini_FC_Board/board render',
-    start: 0,
-    end: 255,
-  }
+  { id: 'viewer1', webm: 'PCBvideo/stm32_fc.webm',     mp4: 'PCBvideo/stm32_fc.mp4'     },
+  { id: 'viewer2', webm: 'PCBvideo/esp32_fc.webm',     mp4: 'PCBvideo/esp32_fc.mp4'     },
+  { id: 'viewer3', webm: 'PCBvideo/diff_breakout.webm', mp4: 'PCBvideo/diff_breakout.mp4' },
+  { id: 'viewer4', webm: 'PCBvideo/coil_driver.webm',  mp4: 'PCBvideo/coil_driver.mp4'  },
+  { id: 'viewer5', webm: 'PCBvideo/cm4_interface.webm', mp4: 'PCBvideo/cm4_interface.mp4' },
+  { id: 'viewer6', webm: 'PCBvideo/fc4.webm',          mp4: 'PCBvideo/fc4.mp4'          },
+  { id: 'viewer7', webm: 'PCBvideo/mini_fc.webm',      mp4: 'PCBvideo/mini_fc.mp4'      },
 ];
 
 const viewers = [];
 
 const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        const idxStr = entry.target.dataset.viewerIndex;
-        if (idxStr == null) continue;
+  (entries) => {
+    for (const entry of entries) {
+      const idxStr = entry.target.dataset.viewerIndex;
+      if (idxStr == null) continue;
+      const viewer = viewers[parseInt(idxStr, 10)];
+      if (viewer) viewer.setVisible(entry.isIntersecting);
+    }
+  },
+  { threshold: 0.25 }
+);
 
-        const index = parseInt(idxStr, 10);
-        const viewer = viewers[index];
-        if (!viewer) continue;
+function createViewer(videoEl, webmSrc, mp4Src, sensitivity = 300) {
+  if (!videoEl) return;
 
-        viewer.setVisible(entry.isIntersecting);
-      }
-    },
-    {
-      threshold: 0.25,  // starts rotating when 25% of image is visible
-    });
+  // Set video sources
+  const srcWebm = document.createElement('source');
+  srcWebm.src = webmSrc;
+  srcWebm.type = 'video/webm';
+  const srcMp4 = document.createElement('source');
+  srcMp4.src = mp4Src;
+  srcMp4.type = 'video/mp4';
+  videoEl.appendChild(srcWebm);
+  videoEl.appendChild(srcMp4);
 
-function createViewer(imgId, pathPrefix, minFrame, maxFrame, sensitivity = 5) {
-  const img = document.getElementById(imgId);
-  if (!img) return;  // Only set up if element exists
+  videoEl.muted = true;
+  videoEl.loop = true;
+  videoEl.playsInline = true;
+  videoEl.preload = 'auto';
 
-  const frameCount = maxFrame - minFrame + 1;
-  let currentFrame = 0;
+  let autoEnabledByUser = true;
+  let isVisible = false;
   let isDragging = false;
   let startX = 0;
 
-  let autoEnabledByUser = true;  // default ON
-  let isVisible = false;
+  // sensitivity = pixels of drag per full video duration
+  // lower = more sensitive, higher = takes more dragging
 
-  function preloadFrames() {
-    let i = minFrame + 1;
-    function loadNext() {
-      if (i > maxFrame) return;
-      const image = new Image();
-      image.src = `${pathPrefix}${i}.webp`;
-      i++;
-      setTimeout(loadNext, 5);
+  function setVisible(visible) {
+    isVisible = visible;
+    if (visible && autoEnabledByUser) {
+      videoEl.play();
+    } else {
+      videoEl.pause();
     }
-    loadNext();
   }
 
-  function updateFrame(offset = 1) {
-    currentFrame = (currentFrame + offset + frameCount) % frameCount;
-    img.src = `${pathPrefix}${minFrame + currentFrame}.webp`;
-  }
-
-  img.src = `${pathPrefix}${minFrame}.webp`;
-  preloadFrames();
-
-  img.addEventListener('mousedown', (e) => {
+  // Mouse drag
+  videoEl.addEventListener('mousedown', (e) => {
     isDragging = true;
     startX = e.clientX;
     autoEnabledByUser = false;
-    updateToggleButton(imgId, false);
+    videoEl.pause();
+    updateToggleButton(viewerIndex, false);
   });
 
   window.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
     const deltaX = e.clientX - startX;
-    const deltaFrames = Math.floor(deltaX / sensitivity);
-    if (deltaFrames !== 0) {
-      updateFrame(deltaFrames);
-      startX = e.clientX;
-    }
+    startX = e.clientX;
+    scrub(deltaX);
   });
 
-  window.addEventListener('mouseup', () => {
-    isDragging = false;
-  });
+  window.addEventListener('mouseup', () => { isDragging = false; });
 
-  img.ondragstart = () => false;
+  videoEl.ondragstart = () => false;
 
-  const interval = setInterval(() => {
-    if (autoEnabledByUser && isVisible) {
-      updateFrame(1);
-    }
-  }, 40);
+  // Touch drag
+  videoEl.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX;
+    autoEnabledByUser = false;
+    videoEl.pause();
+    updateToggleButton(viewerIndex, false);
+  }, { passive: true });
+
+  videoEl.addEventListener('touchmove', (e) => {
+    const deltaX = e.touches[0].clientX - startX;
+    startX = e.touches[0].clientX;
+    scrub(deltaX);
+  }, { passive: true });
+
+  function scrub(deltaX) {
+    if (!videoEl.duration) return;
+    const deltaTime = (deltaX / sensitivity) * videoEl.duration;
+    let newTime = videoEl.currentTime + deltaTime;
+    // Wrap around
+    if (newTime < 0) newTime += videoEl.duration;
+    if (newTime >= videoEl.duration) newTime -= videoEl.duration;
+    videoEl.currentTime = newTime;
+  }
 
   const viewerIndex = viewers.length;
 
   const viewerObj = {
-    img,
+    el: videoEl,
     reset: () => {
       autoEnabledByUser = false;
-      updateToggleButton(imgId, false);
-
-      const targetFrame = 0;
-      const forwardSteps =
-          (frameCount + targetFrame - currentFrame) % frameCount;
-      const backwardSteps =
-          (frameCount + currentFrame - targetFrame) % frameCount;
-      const direction = forwardSteps <= backwardSteps ? 1 : -1;
-      const steps = Math.min(forwardSteps, backwardSteps);
-
-      let stepsRemaining = steps;
-      const animateReset = () => {
-        if (stepsRemaining <= 0) {
-          currentFrame = targetFrame;
-          img.src = `${pathPrefix}${minFrame + currentFrame}.webp`;
-          return;
-        }
-        currentFrame = (currentFrame + direction + frameCount) % frameCount;
-        img.src = `${pathPrefix}${minFrame + currentFrame}.webp`;
-        stepsRemaining--;
-        setTimeout(animateReset, 5);  // Adjust speed here
-      };
-
-      animateReset();
+      videoEl.pause();
+      videoEl.currentTime = 0;
+      updateToggleButton(viewerIndex, false);
     },
     toggle: () => {
       autoEnabledByUser = !autoEnabledByUser;
-      updateToggleButton(imgId, autoEnabledByUser);
+      if (autoEnabledByUser && isVisible) {
+        videoEl.play();
+      } else {
+        videoEl.pause();
+      }
+      updateToggleButton(viewerIndex, autoEnabledByUser);
     },
-    setVisible: (visible) => {
-      isVisible = visible;
-    },
-    dispose: () => {
-      clearInterval(interval);
-      observer.unobserve(img);
-    },
+    setVisible,
   };
 
   viewers.push(viewerObj);
-
-  img.dataset.viewerIndex = String(viewerIndex);
-  observer.observe(img);
+  videoEl.dataset.viewerIndex = String(viewerIndex);
+  observer.observe(videoEl);
 }
 
-function updateToggleButton(imgId, isOn) {
-  const index = parseInt(imgId.replace('viewer', ''), 10);
-  const button = document.getElementById(`toggle-rotate-${index}`);
+function updateToggleButton(viewerIndex, isOn) {
+  const button = document.getElementById(`toggle-rotate-${viewerIndex}`);
+  if (button) button.textContent = isOn ? 'Stop Rotation' : 'Auto Rotate';
 }
 
 function resetViewer(index) {
@@ -187,9 +142,8 @@ function toggleRotation(index) {
 }
 
 for (const config of viewerConfigs) {
-  if (document.getElementById(config.id)) {
-    createViewer(config.id, config.path, config.start, config.end);
-  }
+  const el = document.getElementById(config.id);
+  if (el) createViewer(el, config.webm, config.mp4);
 }
 
 function showModal(id) {
@@ -201,21 +155,17 @@ function showModal(id) {
       modal.removeEventListener('click', outsideClickHandler);
     }
   }
-  setTimeout(() => {
-    modal.addEventListener('click', outsideClickHandler);
-  }, 0);
+  setTimeout(() => modal.addEventListener('click', outsideClickHandler), 0);
 }
 
 function hideModal(id) {
   document.getElementById(id).style.display = 'none';
 }
 
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     const openModal = document.querySelector('.modal[style*="display: flex"]');
-    if (openModal) {
-      openModal.style.display = 'none';
-    }
+    if (openModal) openModal.style.display = 'none';
   }
 });
 
