@@ -134,15 +134,6 @@
                     <div class="pv-port-label" style="left:1200px; top:93px;">1 ALU</div>
                     <div class="pv-port-label" style="left:1270px; top:117px;">0 DataR</div>
 
-                    <!-- pipeline register names: the instruction each one currently
-                         holds is already legible from the wire color alone (matched
-                         against the program legend above), so these are name-only. -->
-                    <div class="pv-pipereg-label" style="left:310px; top:253px;">IF/ID</div>
-                    <div class="pv-pipereg-label" style="left:545px; top:253px;">ID/EX</div>
-                    <div class="pv-pipereg-label" style="left:920px; top:253px;">EX/M</div>
-                    <div class="pv-pipereg-label" style="left:1185px; top:253px;">M/WB</div>
-                    <div class="pv-pipereg-label" style="left:1445px; top:253px;">Writeback</div>
-
                     <!-- hazard control band -->
                     <div class="pv-hazard-band">
                       <div class="pv-hazard-box" id="pv-forwarding-box">
@@ -193,9 +184,13 @@
                       <!-- PC's relay continues across ID, then drops into mux A's real
                            left-edge input above the other three (dataA/MX-fwd/WX-fwd) --
                            the ASel=1 path in the real RTL (mux_821 u_muxa .in001(pc_ex_reg)),
-                           used for AUIPC-style ALU-A operands. -->
+                           used for AUIPC-style ALU-A operands. Only one of mux A's four
+                           inputs is ever actually selected (mux_821 .sel), so this last
+                           leg -- and dataA's direct wire below -- fade unless the trace
+                           says ASel/fwdA picked that specific path this cycle, matching
+                           how the MX/WX forward lines already behave. -->
                       <path class="pv-wire" data-stage="id" d="M 358,65 L 578,65" />
-                      <path class="pv-wire" data-stage="ex" d="M 578,65 L 578,140 L 690,140" />
+                      <path id="line-a-pc" class="pv-wire pv-mux-candidate" data-stage="ex" d="M 578,65 L 578,140 L 690,140" />
                       <!-- inst splits into addrA and addrB right where it crosses the
                            IF/ID bar -- same trunk-and-branch convention as Reg File's
                            dataA/dataB output below, applied on the read-address side too. -->
@@ -208,15 +203,30 @@
                            branches, and the forwarding-highlight lines below all have room to
                            run in parallel without bunching into each other. -->
                       <path class="pv-wire" data-stage="ex" d="M 540,155 L 595,155 L 595,70 L 700,70" />
-                      <path class="pv-wire" data-stage="ex" d="M 540,155 L 595,155 L 595,155 L 690,155" />
+                      <path id="line-a-reg" class="pv-wire pv-mux-candidate" data-stage="ex" d="M 540,155 L 595,155 L 595,155 L 690,155" />
                       <path class="pv-wire" data-stage="ex" d="M 540,195 L 610,195 L 610,80 L 700,80" />
-                      <path class="pv-wire" data-stage="ex" d="M 540,195 L 610,195 L 610,215 L 690,215" />
+                      <path id="line-b-reg" class="pv-wire pv-mux-candidate" data-stage="ex" d="M 540,195 L 610,195 L 610,215 L 690,215" />
                       <!-- imm gen's output exits its own narrow right edge and enters
                            mux B's front-left face, stacked below where dataB enters --
                            two distinct inputs on the same (real) input side, matching
                            how every other mux in this diagram is wired. -->
-                      <path class="pv-wire" data-stage="ex" d="M 765,335 L 765,305 L 675,305 L 675,260 L 690,260" />
+                      <path id="line-b-imm" class="pv-wire pv-mux-candidate" data-stage="ex" d="M 765,335 L 765,305 L 675,305 L 675,260 L 690,260" />
                       <path class="pv-wire" data-stage="ex" d="M 765,335 L 755,335" />
+                      <!-- dataA/dataB stay lit into mux A/B regardless of whether the mux
+                           actually selects them, since the same wire also always feeds
+                           Branch Comp -- dimming alone (.pv-mux-candidate above) can't
+                           disambiguate that. These short accent-colored strokes trace the
+                           mux's real internal sel path from whichever input height is live
+                           to the output apex, so exactly one lights up inside each mux
+                           regardless of what's lit on the input side. -->
+                      <path id="muxa-take-pc" class="pv-mux-take" d="M 690,140 L 745,145" />
+                      <path id="muxa-take-reg" class="pv-mux-take" d="M 690,155 L 745,145" />
+                      <path id="muxa-take-mx" class="pv-mux-take" d="M 690,170 L 745,145" />
+                      <path id="muxa-take-wx" class="pv-mux-take" d="M 690,125 L 745,145" />
+                      <path id="muxb-take-reg" class="pv-mux-take" d="M 690,215 L 745,240" />
+                      <path id="muxb-take-imm" class="pv-mux-take" d="M 690,260 L 745,240" />
+                      <path id="muxb-take-mx" class="pv-mux-take" d="M 690,245 L 745,240" />
+                      <path id="muxb-take-wx" class="pv-mux-take" d="M 690,230 L 745,240" />
                       <!-- mux A and mux B each drive one of the ALU's two real input
                            points, at the 30%/70% height marks matching the polygon's
                            own notches. -->
@@ -383,6 +393,10 @@ Instr 4:                   IF   ID   EX   M    WB</pre>
 add x1, x0, x0    # result available in M by cycle 4
 add x2, x1, x0    # x1 forwarded from M  → no stall
 add x3, x2, x0    # x2 forwarded from WB → no stall</pre>
+            <figure style="margin:16px 0;">
+                <img src="project9/forwarding-example.png" alt="Pipeline visualizer at a cycle with both MX and WX forwarding active, forwarding unit box highlighted and the EX-stage bypass wires lit up" style="max-width:100%; border:1px solid var(--color-border); border-radius:6px;">
+                <figcaption style="font-size:13px; color:var(--color-muted); margin-top:8px;">The visualizer above, mid-forwarding: <code>add x3, x2, x1</code> is in EX while <code>x2</code> is still only in M and <code>x1</code> only in WB — MX and WX both fire the same cycle. Try it live in the "Forwarding chain" scenario.</figcaption>
+            </figure>
 
             <h2>Stalling</h2>
             <p>Load instructions (lw, lh, lb) don't have their results until data memory returns it at the end of M. If the next instruction needs that value, it hits EX while the load is still in M, one cycle too early for forwarding to reach it.</p>
@@ -391,12 +405,20 @@ add x3, x2, x0    # x2 forwarded from WB → no stall</pre>
 Cycle:    1     2     3       4          5
 lw x1:   IF    ID    EX   →  M (stall)  WB
 add x3:        IF    ID   →  ID (stall) EX ← x1 forwarded from WB (WX)</pre>
+            <figure style="margin:16px 0;">
+                <img src="project9/stalling-example.png" alt="Pipeline visualizer at a cycle with a load-use stall active, stalling unit box highlighted and PC/IF-ID shown frozen" style="max-width:100%; border:1px solid var(--color-border); border-radius:6px;">
+                <figcaption style="font-size:13px; color:var(--color-muted); margin-top:8px;"><code>lw x3, 4(x1)</code> is in EX computing its address — the loaded value itself isn't ready until M finishes. <code>addi x3, x3, 1</code> needs that value, so PC and IF/ID both freeze (dashed outline on the PC box) and it stays in ID instead of following the load into EX. Try it live in the "Load-use hazard" scenario.</figcaption>
+            </figure>
 
             <h2>Flushing</h2>
             <p>Pipelining means that we load instructions after a branch, even if the branch is taken, In the event that the branch is taken, we have to get rid of the subsequent instructions that may already be running in the pipeline. To solve this we use a flushing unit.</p>
             <p>Branch and jump outcomes resolve in EX (cycle 3). By then two more instructions have already been fetched down the wrong path and need invalidating if the branch is taken.</p>
             <p>The flush unit watches EX, on a taken branch or unconditional jump it replaces IF/ID's contents with a NOP and redirects PC to the target.</p>
             <p>JAL gets special treatment, its target is PC-relative and fully computable at fetch time, so it resolves in IF with zero penalty. JALR needs a register read, so it resolves in ID at a one-cycle cost.</p>
+            <figure style="margin:16px 0;">
+                <img src="project9/flushing-example.png" alt="Pipeline visualizer at a cycle with a taken branch flush active, flush unit box highlighted and the PC-redirect wire lit up" style="max-width:100%; border:1px solid var(--color-border); border-radius:6px;">
+                <figcaption style="font-size:13px; color:var(--color-muted); margin-top:8px;"><code>bge x1, x2, 8</code> resolves taken in EX. The Flush Unit fires (flush: 1, redirecting PC), and the dark PC-redirect wire carries the branch target back to PC Sel — the two instructions fetched down the wrong path get replaced with NOPs. Try it live in the "Branch taken" scenario.</figcaption>
+            </figure>
 
 <h3>All possible hazards:</h3>
 
@@ -453,6 +475,11 @@ add x3:        IF    ID   →  ID (stall) EX ← x1 forwarded from WB (WX)</pre>
             <h2>Testing</h2>
             <p>42 testbenches: 19 unit tests against individual components, 23 integration tests that run real RISC-V assembly programs through the full pipeline.</p>
             <p>Each integration test assembles a program with the RISC-V GNU toolchain, converts it to a Verilog hex file, and loads it into simulated instruction memory. After execution the testbench reads back the register file and data memory and checks them against expected values. Tests also dump VCD waveforms for GTKWave, for stepping through a hazard signal by signal when something doesn't match.</p>
+
+            <h3>Test build &amp; run flow</h3>
+            <p>What happens between writing an assembly program and getting a pass/fail verdict, for either CPU variant:</p>
+            <img src="project9/cpu_test_flow.png" alt="" width="55%">
+
             <p>Dedicated hazard tests exercise each mitigation path in isolation:</p>
             <ul>
                 <li><strong>load_use_hazard:</strong> specifically triggers the stalling path</li>

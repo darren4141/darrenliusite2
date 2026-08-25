@@ -1,5 +1,6 @@
 (function () {
   const PROGRAMS = [
+    { id: "demo", label: "Full demo (every instruction + a loop)" },
     { id: "fwd_chain", label: "Forwarding chain (MX/WX)" },
     { id: "load_use_hazard", label: "Load-use hazard (stall)" },
     { id: "branch_cmp", label: "Branch taken (flush)" },
@@ -257,6 +258,31 @@
     setHi("line-mx-b", c.ex.fwdB === 2);
     setHi("line-wx-b", c.ex.fwdB === 3);
     setHi("line-wm", c.ex.fwdM === 1);
+
+    // mux_821 u_muxa's actual sel: fwdA wins whenever ASel==0 and fwdA
+    // indicates forwarding (fwdA>=2); otherwise it's just ASel. Mirrored
+    // for mux B/fwdB. Exactly one of each mux's four wired candidates is
+    // ever real per cycle -- fade the other three via .pv-mux-candidate.
+    const aSel = c.ex.control.asel;
+    const bSel = c.ex.control.bsel;
+    setHi("line-a-pc", aSel === 1);
+    setHi("line-a-reg", aSel === 0 && c.ex.fwdA < 2);
+    setHi("line-b-imm", bSel === 1);
+    setHi("line-b-reg", bSel === 0 && c.ex.fwdB < 2);
+
+    // Same four conditions, but as a single unambiguous stroke drawn
+    // inside the mux itself (see .pv-mux-take) -- dataA/dataB stay lit
+    // into the mux regardless of selection since they also always feed
+    // Branch Comp, so dimming the input wire alone can't show which of
+    // the four actually got through.
+    setHi("muxa-take-pc", aSel === 1);
+    setHi("muxa-take-reg", aSel === 0 && c.ex.fwdA < 2);
+    setHi("muxa-take-mx", aSel === 0 && c.ex.fwdA === 2);
+    setHi("muxa-take-wx", aSel === 0 && c.ex.fwdA === 3);
+    setHi("muxb-take-reg", bSel === 0 && c.ex.fwdB < 2);
+    setHi("muxb-take-imm", bSel === 1);
+    setHi("muxb-take-mx", bSel === 0 && c.ex.fwdB === 2);
+    setHi("muxb-take-wx", bSel === 0 && c.ex.fwdB === 3);
 
     $("pv-annotation").textContent = annotate(c);
 

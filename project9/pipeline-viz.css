@@ -220,13 +220,6 @@
   text-align: right;
 }
 
-.pv-pipereg-label {
-  position: absolute;
-  font-size: 10px;
-  color: var(--color-muted);
-  text-align: center;
-  z-index: 2;
-}
 .pv-hazard-band {
   position: absolute;
   left: 10px;
@@ -356,6 +349,37 @@
   stroke: var(--color-accent);
   stroke-width: 3;
   opacity: 0.95;
+}
+
+/* mux A/B each have four wired candidate inputs but select exactly one
+   per cycle (ASel/BSel, or fwdA/fwdB when forwarding wins) -- unlike
+   .pv-fwd-line these keep the instruction's own color (set inline by
+   paintStageWires) rather than swapping to the accent color, so only
+   opacity marks which candidate the mux actually took this cycle. */
+.pv-mux-candidate {
+  opacity: 0.25;
+  transition: opacity 0.15s ease;
+}
+.pv-mux-candidate.pv-active {
+  opacity: 1;
+}
+
+/* Short internal "this is the path taken" stroke inside mux A/B, from the
+   selected input's height to the output apex. Invisible unless active --
+   with four of these packed into one small trapezoid, showing all of them
+   faintly at once (like .pv-mux-candidate) would just be clutter; the
+   point is a single unambiguous line, not a legend of the options. */
+.pv-mux-take {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.pv-mux-take.pv-active {
+  opacity: 0.9;
 }
 
 .pv-annotation {
