@@ -48,7 +48,7 @@
             <h1>Raspberry Pi Bootloader</h1>
             <h2 class="subtitle">2025 &ndash; 2026</h2>
 
-            <p>A bare-metal bootloader for the Raspberry Pi Compute Module 4 (BCM2711, Cortex-A72). It loads first, validates the kernel image, and hands off control to the RTOS &mdash; with support for firmware updates over UART (DFU) and image loading from eMMC. Written from scratch in C and ARM assembly.</p>
+            <p>A bare-metal bootloader for the Raspberry Pi Compute Module 4 (BCM2711, Cortex-A72). It loads first, validates the kernel image, and hands off control to the RTOS -; with support for firmware updates over UART (DFU) and image loading from eMMC. Written from scratch in C and ARM assembly.</p>
             <p>The project is available on <a href="https://github.com/darren4141/rpitos" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
 
             <h2>Startup Sequence</h2>
@@ -115,6 +115,26 @@ typedef struct {
             <p>DFU is supported through scripts and also via the rtos client GUI. Here's a demo of how the DFU looks from the GUI. Notice how the designated app slot changes after flashing a new app.</p>
             <img src="project11\rtos_client_booting.gif" alt="", width="90%">
 
+            <h2>Bootloader Self-Update</h2>The bootloader can flash itself over the same DFU link the app uses. This makes iteration and testing of the bootloader much easier.</p>
+
+            <h3>Self-update flow</h3>
+            <p>The whole sequence, from the host's first packet through the reset and the bootstrap validating what the old bootloader wrote:</p>
+            <img src="project11\self_update_flow.png" alt="" width="20%">
+
+            <h3>Overwriting a running bootloader</h3>
+            <p>This works because of where the bootloader executes from. The bootstrap copies it out of eMMC into RAM at 0x10000 and CRC-validates it there before jumping, so while the bootloader runs, its eMMC copy is just bytes on a block device. It can overwrite the image that boots next time without touching an instruction the CPU is fetching, then reset the board.</p>
+            <p>The bootstrap handles validation of the next bootloader with it's CRC check.</p>
+
+            <h3>Self-update vs app flash</h3>
+            <p>The transfer is the same DFU flow as above: same framing, same 256-byte data chunks, same ACK after every packet, same running CRC32. Only the first packet differs, CMD_START_SELF_UPDATE (0x03) instead of CMD_START (0x02), which sets the destination sector to the bootloader slot instead of the inactive app slot and latches an is_self_update flag for the rest of the session.</p>
+            <p>For an app flash, CMD_FINISH does real work before committing, since the streaming CRC only proves the transfer was intact and not that the bytes landed on eMMC: it reads the new slot back, checks the marker emitted by the standard startup code, and flips the active slot. A self-update skips all of it, since the new bootloader was never going to run in this session:</p>
+<pre>if (is_self_update) {
+  uart_tx_raw(DFU_ACK);
+  uart_print("DFU: bootloader update complete, resetting\r\n");
+  uart_deinit();              // drains the TX FIFO first
+  watchdog_trigger_reset();   // PM full reset
+  // never reached
+}</pre>
         </div>
     </div>
 </body>
